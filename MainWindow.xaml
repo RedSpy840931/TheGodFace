@@ -1,0 +1,635 @@
+﻿<!-- Version: 40 -->
+<Window x:Class="TheGodFace.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Icon Face" Height="700" Width="1100"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        Topmost="True" WindowStartupLocation="CenterScreen"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseRightButtonDown="Window_MouseRightButtonDown"
+        MouseRightButtonUp="Window_MouseRightButtonUp"
+        MouseMove="Window_MouseMove"
+        MouseWheel="Window_MouseWheel"
+        StateChanged="Window_StateChanged"
+        SizeChanged="Window_SizeChanged">
+
+    <Window.Resources>
+        <DiffuseMaterial x:Key="CubeMat" Brush="#121111"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Background" Value="#222"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="Margin" Value="0,0,2,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid x:Name="MainGrid" Background="Transparent">
+
+        <!-- режим 2d -->
+        <Grid x:Name="Container2D" Background="Black" Visibility="Collapsed">
+            <Grid x:Name="FaceWrapper" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,0" ClipToBounds="True">
+                <Canvas x:Name="FaceCanvas" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="True">
+
+                    <Image x:Name="CenterBlushBlurImage" Source="{Binding BlushBlurFullPath}" 
+                           Width="1500" Height="800" RenderTransformOrigin="0.5,0.5" 
+                           Visibility="Hidden" Panel.ZIndex="1"/>
+
+                    <!-- Капля пота (Слой 7 поверх всех глаз и бровей) -->
+                    <Image x:Name="SweatDropImage" Source="{Binding SweatDropFullPath}" Width="200" Height="200"
+                           RenderTransformOrigin="0.5,0.5" Visibility="{Binding HasSweatDrop, Converter={StaticResource BoolToVis}}" Panel.ZIndex="7"/>
+
+                    <ItemsControl x:Name="MouthsControl" ItemsSource="{Binding Mouths}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <Canvas IsItemsHost="True"/>
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemContainerStyle>
+                            <Style TargetType="ContentPresenter">
+                                <Setter Property="Canvas.Left" Value="{Binding OffsetX}"/>
+                                <Setter Property="Canvas.Top" Value="{Binding OffsetY}"/>
+                                <!-- Z-Index теперь жестко задан -->
+                                <Setter Property="Panel.ZIndex" Value="6"/>
+                            </Style>
+                        </ItemsControl.ItemContainerStyle>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Border Background="Transparent" Width="100" Height="100"
+                                        Visibility="{Binding IsVisible, Converter={StaticResource BoolToVis}}"
+                                        MouseLeftButtonDown="MouthImage_MouseDown"
+                                        MouseMove="MouthImage_MouseMove"
+                                        MouseLeftButtonUp="MouthImage_MouseUp"
+                                        Cursor="SizeAll">
+                                    <Image Source="{Binding FullPath}" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="{Binding ScaleXWithFlip}" ScaleY="{Binding Scale}"/>
+                                                <RotateTransform Angle="{Binding Rotation}"/>
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <Canvas x:Name="LeftEyeContainer" Width="120" Height="200" RenderTransformOrigin="0.5,0.5" Panel.ZIndex="3">
+
+                        <Canvas x:Name="LeftEyeGraphics" Panel.ZIndex="1">
+                            <Polyline x:Name="LeftEyeBag" Stroke="Red" StrokeThickness="2.0" Visibility="Hidden" Fill="Transparent" Panel.ZIndex="0"/>
+                            <Rectangle x:Name="LeftEyeBorder" Width="120" Height="200" Stroke="Red" StrokeThickness="7.5" Fill="Transparent" Panel.ZIndex="2"/>
+                            <Canvas x:Name="LeftInnerRect" Width="114" Height="190" Panel.ZIndex="1">
+                                <Path x:Name="LeftPath1" Stroke="Red">
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure x:Name="LeftBezier1_Start">
+                                                <QuadraticBezierSegment x:Name="LeftBezier1_Seg"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                                <Path x:Name="LeftPath2" Stroke="Red">
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure x:Name="LeftBezier2_Start">
+                                                <QuadraticBezierSegment x:Name="LeftBezier2_Seg"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Canvas>
+                            <Image x:Name="LeftSquintImage" Source="{Binding SquintFullPath}" Width="800" Height="800" Canvas.Left="-340" Canvas.Top="-300" RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="4">
+                                <Image.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding SquintScale}" ScaleY="{Binding SquintScale}"/>
+                                </Image.RenderTransform>
+                            </Image>
+                            <Image x:Name="LeftBlinkImage" Source="{Binding BlinkFullPath}" Width="1310" Height="235" Canvas.Left="-595" Canvas.Top="-17.5" RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="5">
+                                <Image.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding BlinkScale}" ScaleY="{Binding BlinkScale}"/>
+                                </Image.RenderTransform>
+                            </Image>
+                        </Canvas>
+
+                        <Image x:Name="LeftBlushImage" Source="{Binding BlushFullPath}" Width="1310" Height="235" 
+                               Canvas.Left="-595" Canvas.Top="{Binding BlushCanvasTop}" 
+                               RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="2">
+                            <Image.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding BlushScale}" ScaleY="{Binding BlushScale}"/>
+                            </Image.RenderTransform>
+                        </Image>
+
+                        <ItemsControl x:Name="LeftCheeksControl" ItemsSource="{Binding Cheeks}" Panel.ZIndex="3">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas IsItemsHost="True"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="-40"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding LeftCanvasTop}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding FullPath}" Width="200" Height="200" Visibility="{Binding IsLeftVisible, Converter={StaticResource BoolToVis}}" RenderTransformOrigin="0.5,0.5" Stretch="Uniform">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl x:Name="LeftEyebrowsControl" ItemsSource="{Binding Eyebrows}" Panel.ZIndex="4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas IsItemsHost="True"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="-40"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding LeftCanvasTop}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding FullPath}" Width="200" Height="200" Visibility="{Binding IsLeftVisible, Converter={StaticResource BoolToVis}}" RenderTransformOrigin="0.5,0.5" Stretch="Uniform">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="{Binding LeftScaleX}" ScaleY="{Binding Scale}"/>
+                                                <RotateTransform Angle="{Binding LeftRotation}"/>
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Rectangle x:Name="LeftEyeHitBox" Width="120" Height="200" Fill="Transparent" Panel.ZIndex="100"
+                                   MouseLeftButtonDown="LeftEyeHitBox_MouseDown" MouseLeftButtonUp="LeftEyeHitBox_MouseUp" MouseLeave="LeftEyeHitBox_MouseLeave"/>
+                    </Canvas>
+
+                    <Canvas x:Name="RightEyeContainer" Width="120" Height="200" RenderTransformOrigin="0.5,0.5" Panel.ZIndex="3">
+
+                        <Canvas x:Name="RightEyeGraphics" Panel.ZIndex="1">
+                            <Polyline x:Name="RightEyeBag" Stroke="Red" StrokeThickness="2.0" Visibility="Hidden" Fill="Transparent" Panel.ZIndex="0"/>
+                            <Rectangle x:Name="RightEyeBorder" Width="120" Height="200" Stroke="Red" StrokeThickness="7.5" Fill="Transparent" Panel.ZIndex="2"/>
+                            <Canvas x:Name="RightInnerRect" Width="114" Height="190" Panel.ZIndex="1">
+                                <Path x:Name="RightPath1" Stroke="Red">
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure x:Name="RightBezier1_Start">
+                                                <QuadraticBezierSegment x:Name="RightBezier1_Seg"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                                <Path x:Name="RightPath2" Stroke="Red">
+                                    <Path.Data>
+                                        <PathGeometry>
+                                            <PathFigure x:Name="RightBezier2_Start">
+                                                <QuadraticBezierSegment x:Name="RightBezier2_Seg"/>
+                                            </PathFigure>
+                                        </PathGeometry>
+                                    </Path.Data>
+                                </Path>
+                            </Canvas>
+                            <Image x:Name="RightSquintImage" Source="{Binding SquintFullPath}" Width="800" Height="800" Canvas.Left="-340" Canvas.Top="-300" RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="4">
+                                <Image.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding SquintScaleRight}" ScaleY="{Binding SquintScale}"/>
+                                </Image.RenderTransform>
+                            </Image>
+                            <Image x:Name="RightBlinkImage" Source="{Binding BlinkFullPath}" Width="1310" Height="235" Canvas.Left="-595" Canvas.Top="-17.5" RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="5">
+                                <Image.RenderTransform>
+                                    <ScaleTransform ScaleX="{Binding BlinkScale}" ScaleY="{Binding BlinkScale}"/>
+                                </Image.RenderTransform>
+                            </Image>
+                        </Canvas>
+
+                        <Image x:Name="RightBlushImage" Source="{Binding BlushFullPath}" Width="1310" Height="235" 
+                               Canvas.Left="-595" Canvas.Top="{Binding BlushCanvasTop}" 
+                               RenderTransformOrigin="0.5,0.5" Visibility="Hidden" Panel.ZIndex="2">
+                            <Image.RenderTransform>
+                                <ScaleTransform ScaleX="{Binding BlushScale}" ScaleY="{Binding BlushScale}"/>
+                            </Image.RenderTransform>
+                        </Image>
+
+                        <ItemsControl x:Name="RightCheeksControl" ItemsSource="{Binding Cheeks}" Panel.ZIndex="3">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas IsItemsHost="True"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="-40"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding RightCanvasTop}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding FullPath}" Width="200" Height="200" Visibility="{Binding IsRightVisible, Converter={StaticResource BoolToVis}}" RenderTransformOrigin="0.5,0.5" Stretch="Uniform">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="{Binding Scale}" ScaleY="{Binding Scale}"/>
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ItemsControl x:Name="RightEyebrowsControl" ItemsSource="{Binding Eyebrows}" Panel.ZIndex="4">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas IsItemsHost="True"/>
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemContainerStyle>
+                                <Style TargetType="ContentPresenter">
+                                    <Setter Property="Canvas.Left" Value="-40"/>
+                                    <Setter Property="Canvas.Top" Value="{Binding RightCanvasTop}"/>
+                                </Style>
+                            </ItemsControl.ItemContainerStyle>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Image Source="{Binding FullPath}" Width="200" Height="200" Visibility="{Binding IsRightVisible, Converter={StaticResource BoolToVis}}" RenderTransformOrigin="0.5,0.5" Stretch="Uniform">
+                                        <Image.RenderTransform>
+                                            <TransformGroup>
+                                                <ScaleTransform ScaleX="{Binding RightScaleX}" ScaleY="{Binding Scale}"/>
+                                                <RotateTransform Angle="{Binding RightRotation}"/>
+                                            </TransformGroup>
+                                        </Image.RenderTransform>
+                                    </Image>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Rectangle x:Name="RightEyeHitBox" Width="120" Height="200" Fill="Transparent" Panel.ZIndex="100"
+                                   MouseLeftButtonDown="RightEyeHitBox_MouseDown" MouseLeftButtonUp="RightEyeHitBox_MouseUp" MouseLeave="RightEyeHitBox_MouseLeave"/>
+                    </Canvas>
+                </Canvas>
+            </Grid>
+        </Grid>
+
+        <!-- режим 3d -->
+        <Viewport3D x:Name="Container3D" Visibility="Visible">
+            <Viewport3D.Camera>
+                <PerspectiveCamera x:Name="MainCamera" Position="0,0,5" LookDirection="0,0,-1" UpDirection="0,1,0" FieldOfView="60"/>
+            </Viewport3D.Camera>
+
+            <ModelVisual3D>
+                <ModelVisual3D.Content>
+                    <Model3DGroup>
+                        <AmbientLight Color="#555555"/>
+                        <DirectionalLight Color="#AAAAAA" Direction="-1,-1,-1"/>
+                        <DirectionalLight Color="#666666" Direction="1,1,1"/>
+                    </Model3DGroup>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+            <ModelVisual3D>
+                <ModelVisual3D.Transform>
+                    <Transform3DGroup>
+                        <RotateTransform3D>
+                            <RotateTransform3D.Rotation>
+                                <AxisAngleRotation3D Axis="1,0,0" Angle="{Binding ElementName=CubeRotX, Path=Angle}"/>
+                            </RotateTransform3D.Rotation>
+                        </RotateTransform3D>
+                        <RotateTransform3D>
+                            <RotateTransform3D.Rotation>
+                                <AxisAngleRotation3D Axis="0,1,0" Angle="{Binding ElementName=CubeRotY, Path=Angle}"/>
+                            </RotateTransform3D.Rotation>
+                        </RotateTransform3D>
+                    </Transform3DGroup>
+                </ModelVisual3D.Transform>
+                <ModelVisual3D.Content>
+                    <Model3DGroup>
+                        <GeometryModel3D x:Name="FaceFront" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="-1,1,1 -1,-1,1 1,-1,1 1,1,1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                        <GeometryModel3D x:Name="FaceBack" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="1,1,-1 1,-1,-1 -1,-1,-1 -1,1,-1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                        <GeometryModel3D x:Name="FaceLeft" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="-1,1,-1 -1,-1,-1 -1,-1,1 -1,1,1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                        <GeometryModel3D x:Name="FaceRight" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="1,1,1 1,-1,1 1,-1,-1 1,1,-1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                        <GeometryModel3D x:Name="FaceTop" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="-1,1,-1 -1,1,1 1,1,1 1,1,-1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                        <GeometryModel3D x:Name="FaceBottom" Material="{StaticResource CubeMat}" BackMaterial="{StaticResource CubeMat}">
+                            <GeometryModel3D.Geometry>
+                                <MeshGeometry3D Positions="-1,-1,1 -1,-1,-1 1,-1,-1 1,-1,1" TriangleIndices="0,1,2 0,2,3"/>
+                            </GeometryModel3D.Geometry>
+                        </GeometryModel3D>
+                    </Model3DGroup>
+                </ModelVisual3D.Content>
+            </ModelVisual3D>
+
+            <Viewport2DVisual3D x:Name="FrontFace3D">
+                <Viewport2DVisual3D.Transform>
+                    <Transform3DGroup>
+                        <RotateTransform3D>
+                            <RotateTransform3D.Rotation>
+                                <AxisAngleRotation3D x:Name="CubeRotX" Axis="1,0,0" Angle="0"/>
+                            </RotateTransform3D.Rotation>
+                        </RotateTransform3D>
+                        <RotateTransform3D>
+                            <RotateTransform3D.Rotation>
+                                <AxisAngleRotation3D x:Name="CubeRotY" Axis="0,1,0" Angle="0"/>
+                            </RotateTransform3D.Rotation>
+                        </RotateTransform3D>
+                    </Transform3DGroup>
+                </Viewport2DVisual3D.Transform>
+                <Viewport2DVisual3D.Geometry>
+                    <MeshGeometry3D Positions="-1,1,1.01 -1,-1,1.01 1,-1,1.01 1,1,1.01" TriangleIndices="0,1,2 0,2,3" TextureCoordinates="0,0 0,1 1,1 1,0"/>
+                </Viewport2DVisual3D.Geometry>
+                <Viewport2DVisual3D.Material>
+                    <EmissiveMaterial Viewport2DVisual3D.IsVisualHostMaterial="True" Brush="White"/>
+                </Viewport2DVisual3D.Material>
+            </Viewport2DVisual3D>
+        </Viewport3D>
+
+        <!-- инженерное меню -->
+        <Border x:Name="SettingsMenu" Visibility="Collapsed" Background="#EE111111" Width="360" HorizontalAlignment="Left" Padding="10" BorderBrush="Red" BorderThickness="0,0,2,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="КОНСТРУКТОР ЭМОЦИЙ" Foreground="Red" FontWeight="Bold" Margin="5,5,0,15"/>
+
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+
+                    <TabItem Header="БАЗА">
+                        <StackPanel Margin="0,15,0,0">
+                            <TextBlock Text="Масштаб проекции на 3D грань" Foreground="White" FontSize="11"/>
+                            <Slider x:Name="CubeScaleSlider" Minimum="0.2" Maximum="3.0" Value="1.1696186905904113" ValueChanged="Settings_Changed"/>
+                        </StackPanel>
+                    </TabItem>
+
+                    <TabItem Header="ГЛАЗА">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="0,0,10,0">
+                            <StackPanel Margin="0,15,0,0">
+                                <TextBlock Text="Размер глаз" Foreground="White" FontSize="11"/>
+                                <Slider x:Name="ScaleSlider" Minimum="0.1" Maximum="3.0" Value="1.723811367578239" ValueChanged="Settings_Changed"/>
+
+                                <TextBlock Text="Межцентровое расстояние" Foreground="White" FontSize="11" Margin="0,15,0,0"/>
+                                <Slider x:Name="DistanceSlider" Minimum="50" Maximum="800" Value="228.22250194741417" ValueChanged="Settings_Changed"/>
+
+                                <TextBlock Text="Смещение по вертикали" Foreground="White" FontSize="11" Margin="0,15,0,0"/>
+                                <Slider x:Name="HeightSlider" Minimum="-300" Maximum="300" Value="-58.396279027760485" ValueChanged="Settings_Changed"/>
+
+                                <TextBlock Text="Уровень стресса (1-Спок, 2-Волн, 3-Шок)" Foreground="Yellow" FontSize="11" Margin="0,15,0,0"/>
+                                <Slider x:Name="StressSlider" Minimum="1" Maximum="3" Value="1" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="StressSlider_ValueChanged"/>
+
+                                <Separator Background="#444" Margin="0,15,0,15"/>
+
+                                <TextBlock Text="УПРАВЛЕНИЕ ВЗГЛЯДОМ" Foreground="Red" FontWeight="Bold" Margin="0,0,0,10"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <CheckBox Content="Свободный" IsChecked="{Binding GazeFree}" Foreground="White" Margin="0,0,15,0"/>
+                                    <CheckBox Content="Прямой взгляд" IsChecked="{Binding GazeStraight}" Foreground="White" Margin="0,0,15,0"/>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <CheckBox Content="Влево" IsChecked="{Binding GazeLeft}" Foreground="White" Margin="0,0,15,0"/>
+                                    <CheckBox Content="Вправо" IsChecked="{Binding GazeRight}" Foreground="White" Margin="0,0,15,0"/>
+                                    <CheckBox Content="Вниз" IsChecked="{Binding GazeDown}" Foreground="White"/>
+                                </StackPanel>
+
+                                <Separator Background="#444" Margin="0,15,0,15"/>
+
+                                <TextBlock Text="ЭФФЕКТЫ (ЗАЖМУР, BLINK, ПОТ)" Foreground="Red" FontWeight="Bold" Margin="0,0,0,10"/>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                    <CheckBox Content="Зажмурить Левый" IsChecked="{Binding IsLeftSquinting}" Foreground="White" Margin="0,0,15,0"/>
+                                    <CheckBox Content="Зажмурить Правый" IsChecked="{Binding IsRightSquinting}" Foreground="White"/>
+                                </StackPanel>
+
+                                <CheckBox Content="Капля пота (Sweat Drop)" IsChecked="{Binding HasSweatDrop}" Foreground="SkyBlue" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                                <Button Content="СДЕЛАТЬ BLINK (Тест)" Click="ManualBlink_Click" Background="#5555AA" Foreground="White" BorderThickness="0" Padding="5" Margin="0,0,0,15"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <TabItem Header="БРОВИ">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Button Grid.Row="0" Content="➕ Создать эмоцию (Брови)" Click="CreateEyebrow_Click" Background="#444" Foreground="White" BorderThickness="0" Padding="5" Margin="0,0,0,10"/>
+
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Eyebrows}" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,5" Width="310">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <RadioButton Grid.Column="0" GroupName="ActiveEyebrowGroup" IsChecked="{Binding IsVisible}" Checked="EyebrowVisibility_Checked" VerticalAlignment="Top" Margin="0,5,5,0"/>
+
+                                            <Expander Grid.Column="1" Background="#333" Foreground="White" IsExpanded="{Binding IsExpanded}" Expanded="EyebrowExpander_Expanded">
+                                                <Expander.Header>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" MouseDown="EyebrowName_MouseDown" Cursor="Hand"/>
+                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" LostFocus="EyebrowName_LostFocus" KeyDown="EyebrowName_KeyDown"/>
+                                                    </Grid>
+                                                </Expander.Header>
+                                                <StackPanel Margin="5,10,5,10">
+
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                                            <TextBlock Text="ЛЕВАЯ" Foreground="#AAA" FontWeight="Bold"/>
+                                                            <CheckBox Content="Рендер" IsChecked="{Binding RenderLeft}" Foreground="White" Margin="0,5,0,0"/>
+                                                            <CheckBox Content="Flip X" IsChecked="{Binding FlipLeftX}" Foreground="White" Margin="0,2,0,5"/>
+
+                                                            <TextBlock Text="Поворот" Foreground="#CCC" FontSize="11"/>
+                                                            <!-- ВОЗВРАЩЕН СЛАЙДЕР ПОВОРОТА БРОВИ -->
+                                                            <Slider Minimum="-45" Maximum="45" Value="{Binding LeftRotation}" Margin="0,0,0,5"/>
+
+                                                            <TextBlock Text="Высота (0 = низ)" Foreground="#CCC" FontSize="11"/>
+                                                            <Slider Minimum="0" Maximum="300" Value="{Binding LeftOffset}"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                                            <TextBlock Text="ПРАВАЯ" Foreground="#AAA" FontWeight="Bold"/>
+                                                            <CheckBox Content="Рендер" IsChecked="{Binding RenderRight}" Foreground="White" Margin="0,5,0,0"/>
+                                                            <CheckBox Content="Flip X" IsChecked="{Binding FlipRightX}" Foreground="White" Margin="0,2,0,5"/>
+
+                                                            <TextBlock Text="Поворот" Foreground="#CCC" FontSize="11"/>
+                                                            <!-- ВОЗВРАЩЕН СЛАЙДЕР ПОВОРОТА БРОВИ -->
+                                                            <Slider Minimum="-45" Maximum="45" Value="{Binding RightRotation}" Margin="0,0,0,5"/>
+
+                                                            <TextBlock Text="Высота (0 = низ)" Foreground="#CCC" FontSize="11"/>
+                                                            <Slider Minimum="0" Maximum="300" Value="{Binding RightOffset}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <Button Content="УДАЛИТЬ" Click="DeleteEyebrow_Click" Background="#880000" Foreground="White" BorderThickness="0" Padding="5" Margin="0,15,0,0"/>
+                                                </StackPanel>
+                                            </Expander>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="ЩЕЧКИ">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Button Grid.Row="0" Content="➕ Создать эмоцию (Щечки)" Click="CreateCheek_Click" Background="#444" Foreground="White" BorderThickness="0" Padding="5" Margin="0,0,0,10"/>
+
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Cheeks}" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,5" Width="310">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <RadioButton Grid.Column="0" GroupName="ActiveCheekGroup" IsChecked="{Binding IsVisible}" Checked="CheekVisibility_Checked" VerticalAlignment="Top" Margin="0,5,5,0"/>
+
+                                            <Expander Grid.Column="1" Background="#333" Foreground="White" IsExpanded="{Binding IsExpanded}" Expanded="CheekExpander_Expanded">
+                                                <Expander.Header>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" MouseDown="CheekName_MouseDown" Cursor="Hand"/>
+                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" LostFocus="CheekName_LostFocus" KeyDown="CheekName_KeyDown"/>
+                                                    </Grid>
+                                                </Expander.Header>
+                                                <StackPanel Margin="5,10,5,10">
+
+                                                    <CheckBox Content="С румянцем (Blush)" IsChecked="{Binding HasBlush}" Foreground="LightPink" FontWeight="Bold" Margin="0,0,0,15"/>
+
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                                                            <TextBlock Text="ЛЕВАЯ" Foreground="#AAA" FontWeight="Bold"/>
+                                                            <CheckBox Content="Рендер" IsChecked="{Binding RenderLeft}" Foreground="White" Margin="0,5,0,15"/>
+
+                                                            <TextBlock Text="Высота" Foreground="#CCC" FontSize="11"/>
+                                                            <Slider Minimum="7.804878048780504" Maximum="43.227642276422735" Value="{Binding LeftOffset}"/>
+                                                        </StackPanel>
+
+                                                        <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                                                            <TextBlock Text="ПРАВАЯ" Foreground="#AAA" FontWeight="Bold"/>
+                                                            <CheckBox Content="Рендер" IsChecked="{Binding RenderRight}" Foreground="White" Margin="0,5,0,15"/>
+
+                                                            <TextBlock Text="Высота" Foreground="#CCC" FontSize="11"/>
+                                                            <Slider Minimum="7.804878048780504" Maximum="43.227642276422735" Value="{Binding RightOffset}"/>
+                                                        </StackPanel>
+                                                    </Grid>
+
+                                                    <Button Content="УДАЛИТЬ" Click="DeleteCheek_Click" Background="#880000" Foreground="White" BorderThickness="0" Padding="5" Margin="0,15,0,0"/>
+                                                </StackPanel>
+                                            </Expander>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </TabItem>
+
+                    <TabItem Header="РТЫ">
+                        <Grid Margin="0,10,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <Button Grid.Row="0" Content="➕ Создать эмоцию (Рот)" Click="CreateMouth_Click" Background="#444" Foreground="White" BorderThickness="0" Padding="5" Margin="0,0,0,10"/>
+
+                            <ListBox Grid.Row="1" ItemsSource="{Binding Mouths}" Background="Transparent" BorderThickness="0" Foreground="White" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,5" Width="310">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <RadioButton Grid.Column="0" GroupName="ActiveMouthGroup" IsChecked="{Binding IsVisible}" Checked="MouthVisibility_Checked" VerticalAlignment="Top" Margin="0,5,5,0"/>
+
+                                            <Expander Grid.Column="1" Background="#333" Foreground="White" IsExpanded="{Binding IsExpanded}" Expanded="MouthExpander_Expanded">
+                                                <Expander.Header>
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Name}" FontWeight="Bold" MouseDown="MouthName_MouseDown" Cursor="Hand"/>
+                                                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Visibility="Collapsed" LostFocus="MouthName_LostFocus" KeyDown="MouthName_KeyDown"/>
+                                                    </Grid>
+                                                </Expander.Header>
+                                                <StackPanel Margin="5,10,5,10">
+                                                    <Button Content="📁 ВЫБРАТЬ ФАЙЛ" Click="MouthFile_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5"/>
+                                                    <TextBlock Text="{Binding FilePath}" FontSize="9" Foreground="#AAA" Margin="0,2,0,10" TextWrapping="Wrap"/>
+
+                                                    <TextBlock Text="Масштаб" FontSize="11" Foreground="#CCC"/>
+                                                    <Slider Minimum="1.0" Maximum="15.0" Value="{Binding Scale}" Margin="0,0,0,10"/>
+
+                                                    <TextBlock Text="Поворот" FontSize="11" Foreground="#CCC"/>
+                                                    <Slider Minimum="0" Maximum="360" Value="{Binding Rotation}" Margin="0,0,0,10"/>
+
+                                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                                        <CheckBox Content="Отразить по X" IsChecked="{Binding FlipX}" Foreground="White" Margin="0,0,10,0"/>
+                                                    </StackPanel>
+
+                                                    <!-- Z-INDEX ПОЛЗУНОК УДАЛЕН -->
+
+                                                    <Button Content="УДАЛИТЬ" Click="DeleteMouth_Click" Background="#880000" Foreground="White" BorderThickness="0" Padding="5"/>
+                                                </StackPanel>
+                                            </Expander>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </TabItem>
+
+                </TabControl>
+
+                <StackPanel Grid.Row="2">
+                    <Button Content="ЗАПИСАТЬ В КОНФИГ" Margin="0,10,0,0" Click="SaveButton_Click" Background="Red" Foreground="White" BorderThickness="0" Height="30"/>
+                    <Button Content="ЗАКРЫТЬ МЕНЮ" Margin="0,5,0,0" Click="CloseMenu_Click" Background="#333" Foreground="White" BorderThickness="0" Height="25"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>
