@@ -3,13 +3,13 @@ using System;
 
 namespace TheGodFace.Utils
 {
-    // ==========================================
-    // ”“»À»“¿: ”ÃÕ€≈ œ”“» (œŒ–“¿“»¬ÕŒ—“‹)
-    // ==========================================
+    // Resolves asset paths between absolute disk paths and paths relative to the assets root.
     public static class PathHelper
     {
+        // Folder that contains the assets directory, always ending with a separator.
         public static string BaseAssetsDir { get; private set; }
 
+        // Walks up from the executable until a folder with assets is found and caches it.
         static PathHelper()
         {
             string? currentDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -29,6 +29,7 @@ namespace TheGodFace.Utils
             BaseAssetsDir = AppDomain.CurrentDomain.BaseDirectory ?? string.Empty;
         }
 
+        // Converts an absolute asset path into the relative form stored in FaceConfig.
         public static string GetRelativePath(string fullPath)
         {
             if (string.IsNullOrEmpty(fullPath)) return "";
@@ -42,6 +43,7 @@ namespace TheGodFace.Utils
             catch { return fullPath; }
         }
 
+        // Expands a stored relative asset path into an absolute one for WPF image bindings.
         public static string GetFullPath(string path)
         {
             if (string.IsNullOrEmpty(path)) return "";

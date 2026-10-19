@@ -361,3 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+# Локальные данные приложения: конфиг, лог диалогов, ключ API
+ai_responses.txt
+face_config.json
+api_key.txt

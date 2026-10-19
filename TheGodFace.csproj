@@ -2,15 +2,26 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.26100.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <StartupObject>TheGodFace.App</StartupObject>
+    <ApplicationIcon>ic0n.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <Content Include="ic0n.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="assets\decals\initializing_start.gif" />
+    <EmbeddedResource Include="assets\decals\initializing_loop.gif" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="models\" />
-    <Folder Include="utils\" />
   </ItemGroup>
 
 </Project>

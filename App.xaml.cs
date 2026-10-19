@@ -4,9 +4,7 @@ using System.Windows;
 
 namespace TheGodFace
 {
-    /// <summary>
-    /// Interaction logic for App.xaml
-    /// </summary>
+    // Application entry point; MainWindow is opened by StartupUri declared in App.xaml.
     public partial class App : Application
     {
     }

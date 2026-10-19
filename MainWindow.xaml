@@ -1,4 +1,4 @@
-﻿<!-- Version: 40 -->
+﻿<!-- Version: 41 -->
 <Window x:Class="TheGodFace.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
@@ -28,16 +28,15 @@
 
     <Grid x:Name="MainGrid" Background="Transparent">
 
-        <!-- режим 2d -->
+        <!-- 2D mode: the whole face lives in FaceCanvas inside Container2D -->
         <Grid x:Name="Container2D" Background="Black" Visibility="Collapsed">
             <Grid x:Name="FaceWrapper" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,0" ClipToBounds="True">
                 <Canvas x:Name="FaceCanvas" HorizontalAlignment="Left" VerticalAlignment="Top" ClipToBounds="True">
-
                     <Image x:Name="CenterBlushBlurImage" Source="{Binding BlushBlurFullPath}" 
                            Width="1500" Height="800" RenderTransformOrigin="0.5,0.5" 
                            Visibility="Hidden" Panel.ZIndex="1"/>
 
-                    <!-- Капля пота (Слой 7 поверх всех глаз и бровей) -->
+                    <!-- Sweat drop decal, stacked above the eyes and brows -->
                     <Image x:Name="SweatDropImage" Source="{Binding SweatDropFullPath}" Width="200" Height="200"
                            RenderTransformOrigin="0.5,0.5" Visibility="{Binding HasSweatDrop, Converter={StaticResource BoolToVis}}" Panel.ZIndex="7"/>
 
@@ -51,7 +50,7 @@
                             <Style TargetType="ContentPresenter">
                                 <Setter Property="Canvas.Left" Value="{Binding OffsetX}"/>
                                 <Setter Property="Canvas.Top" Value="{Binding OffsetY}"/>
-                                <!-- Z-Index теперь жестко задан -->
+                                <!-- Mouth layer index is fixed so mouths stay above the cheek decals -->
                                 <Setter Property="Panel.ZIndex" Value="6"/>
                             </Style>
                         </ItemsControl.ItemContainerStyle>
@@ -279,7 +278,7 @@
             </Grid>
         </Grid>
 
-        <!-- режим 3d -->
+        <!-- 3D mode: the same face is mapped onto the cube front face -->
         <Viewport3D x:Name="Container3D" Visibility="Visible">
             <Viewport3D.Camera>
                 <PerspectiveCamera x:Name="MainCamera" Position="0,0,5" LookDirection="0,0,-1" UpDirection="0,1,0" FieldOfView="60"/>
@@ -370,7 +369,18 @@
             </Viewport2DVisual3D>
         </Viewport3D>
 
-        <!-- инженерное меню -->
+        <!-- Chat test panel that sends text to GeminiService and shows the model answer -->
+        <Border x:Name="ChatPanel" Background="#CC000000" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,611,0,0" Padding="15" CornerRadius="10" Panel.ZIndex="999">
+            <StackPanel Orientation="Vertical" Width="400">
+                <TextBlock x:Name="AiReplyText" Text="Ассистент спит..." Foreground="LightGreen" TextWrapping="Wrap" Margin="0,0,0,10" FontSize="14" FontWeight="Bold"/>
+                <StackPanel Orientation="Horizontal">
+                    <TextBox x:Name="UserInputBox" Width="300" Height="30" Padding="5" Background="#333" Foreground="White" BorderThickness="1" BorderBrush="#555" Text="Скажи что-нибудь саркастичное про мою архитектуру кода!"/>
+                    <Button Content="SEND" Width="80" Height="30" Margin="10,0,0,0" Background="#444" Foreground="White" BorderThickness="0" Click="TestAiButton_Click"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- Engineering menu: sliders and preset lists bound to MainWindow properties -->
         <Border x:Name="SettingsMenu" Visibility="Collapsed" Background="#EE111111" Width="360" HorizontalAlignment="Left" Padding="10" BorderBrush="Red" BorderThickness="0,0,2,0">
             <Grid>
                 <Grid.RowDefinitions>
@@ -475,7 +485,6 @@
                                                             <CheckBox Content="Flip X" IsChecked="{Binding FlipLeftX}" Foreground="White" Margin="0,2,0,5"/>
 
                                                             <TextBlock Text="Поворот" Foreground="#CCC" FontSize="11"/>
-                                                            <!-- ВОЗВРАЩЕН СЛАЙДЕР ПОВОРОТА БРОВИ -->
                                                             <Slider Minimum="-45" Maximum="45" Value="{Binding LeftRotation}" Margin="0,0,0,5"/>
 
                                                             <TextBlock Text="Высота (0 = низ)" Foreground="#CCC" FontSize="11"/>
@@ -488,7 +497,6 @@
                                                             <CheckBox Content="Flip X" IsChecked="{Binding FlipRightX}" Foreground="White" Margin="0,2,0,5"/>
 
                                                             <TextBlock Text="Поворот" Foreground="#CCC" FontSize="11"/>
-                                                            <!-- ВОЗВРАЩЕН СЛАЙДЕР ПОВОРОТА БРОВИ -->
                                                             <Slider Minimum="-45" Maximum="45" Value="{Binding RightRotation}" Margin="0,0,0,5"/>
 
                                                             <TextBlock Text="Высота (0 = низ)" Foreground="#CCC" FontSize="11"/>
@@ -610,8 +618,6 @@
                                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                                         <CheckBox Content="Отразить по X" IsChecked="{Binding FlipX}" Foreground="White" Margin="0,0,10,0"/>
                                                     </StackPanel>
-
-                                                    <!-- Z-INDEX ПОЛЗУНОК УДАЛЕН -->
 
                                                     <Button Content="УДАЛИТЬ" Click="DeleteMouth_Click" Background="#880000" Foreground="White" BorderThickness="0" Padding="5"/>
                                                 </StackPanel>
