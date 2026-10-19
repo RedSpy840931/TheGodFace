@@ -1,4 +1,4 @@
-// Version: 41 stable (config path bound to the exe directory, migration from legacy build folders)
+// Version: 42 (config lives in the versioned presets folder next to the prompts)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,6 +13,8 @@ namespace TheGodFace.Utils
     {
         // Name of the JSON file shared between the editor UI and the loader.
         private const string ConfigFileName = "face_config.json";
+        // Folder that holds the versioned face preset together with the prompt templates.
+        private const string ConfigFolder = "presets";
 
         // Resolved once at startup so the path never depends on the process working directory.
         private static readonly string ConfigPath = ResolveConfigPath();
@@ -25,6 +27,10 @@ namespace TheGodFace.Utils
         {
             try
             {
+                // A fresh checkout may lack the presets folder, so it is created before writing.
+                string? folder = Path.GetDirectoryName(ConfigPath);
+                if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
+
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 File.WriteAllText(ConfigPath, JsonSerializer.Serialize(config, options));
             }
@@ -39,16 +45,16 @@ namespace TheGodFace.Utils
             catch (Exception) { return null; }
         }
 
-        // Prefers the config next to the exe and copies it from a legacy build folder when missing.
+        // Uses the presets folder next to the sources and migrates an old copy out of the build output.
         private static string ResolveConfigPath()
         {
-            string exeDir = AppContext.BaseDirectory;
-            string primary = Path.Combine(exeDir, ConfigFileName);
+            string primary = Path.Combine(PathHelper.GetFullPath(ConfigFolder), ConfigFileName);
 
             if (File.Exists(primary)) return primary;
 
-            string? legacy = EnumerateLegacyConfigs(exeDir)
+            string? legacy = EnumerateLegacyConfigs()
                 .Where(File.Exists)
+                .Where(path => !string.Equals(path, primary, StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(File.GetLastWriteTimeUtc)
                 .FirstOrDefault();
 
@@ -56,20 +62,24 @@ namespace TheGodFace.Utils
             {
                 try
                 {
+                    // Migration copies the newest old config into presets, so the file becomes versioned.
+                    string? folder = Path.GetDirectoryName(primary);
+                    if (!string.IsNullOrEmpty(folder)) Directory.CreateDirectory(folder);
                     File.Copy(legacy, primary, overwrite: false);
                     if (File.Exists(primary)) return primary;
                 }
                 catch { }
+                // Copy failed: keep working on the old file instead of silently losing the pose.
                 return legacy;
             }
 
             return primary;
         }
 
-        // Yields candidate config files: everything under bin plus the assets folder used when running from sources.
-        private static IEnumerable<string> EnumerateLegacyConfigs(string exeDir)
+        // Yields candidate config files: everything under bin plus the folder next to the assets.
+        private static IEnumerable<string> EnumerateLegacyConfigs()
         {
-            string exeDirTrimmed = exeDir.TrimEnd(
+            string exeDirTrimmed = AppContext.BaseDirectory.TrimEnd(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
             // Walks up until the bin folder is found, so Debug, Release and any TFM are covered.

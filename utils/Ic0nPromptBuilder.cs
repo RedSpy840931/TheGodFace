@@ -5,12 +5,12 @@ using System.Text;
 
 namespace TheGodFace.Utils
 {
-    // Fills the prompt template from the prompts folder with the presets available in the face editor.
+    // Fills the prompt template from the presets folder with the presets available in the face editor.
     public static class Ic0nPromptBuilder
     {
-        // Reads one template from the prompts folder as UTF-8 text.
+        // Reads one template from presets/prompts as UTF-8 text, next to the versioned face preset.
         private static string ReadTemplate(string fileName) =>
-            File.ReadAllText(PathHelper.GetFullPath(Path.Combine("prompts", fileName)), Encoding.UTF8);
+            File.ReadAllText(PathHelper.GetFullPath(Path.Combine("presets", "prompts", fileName)), Encoding.UTF8);
 
         // Builds the model prompt from the sitting pose and the allowed preset names.
         public static string BuildFlashLitePrompt(

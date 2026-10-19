@@ -365,3 +365,5 @@ FodyWeavers.xsd
 ai_responses.txt
 face_config.json
 api_key.txt
+# Поза лица версионируется вместе с промптами, остальные копии остаются локальными
+!/presets/face_config.json
