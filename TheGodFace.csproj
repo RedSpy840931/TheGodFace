@@ -21,6 +21,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Face decals travel inside the assembly, so a copied exe renders without the assets folder. -->
+    <Resource Include="assets\**\*.png" />
+    <!-- Default pose and prompt templates are embedded as the fallback when presets is missing on disk. -->
+    <EmbeddedResource Include="presets\face_config.json" />
+    <EmbeddedResource Include="presets\prompts\*.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Folder Include="models\" />
   </ItemGroup>
 

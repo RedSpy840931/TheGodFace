@@ -8,9 +8,22 @@ namespace TheGodFace.Utils
     // Fills the prompt template from the presets folder with the presets available in the face editor.
     public static class Ic0nPromptBuilder
     {
-        // Reads one template from presets/prompts as UTF-8 text, next to the versioned face preset.
-        private static string ReadTemplate(string fileName) =>
-            File.ReadAllText(PathHelper.GetFullPath(Path.Combine("presets", "prompts", fileName)), Encoding.UTF8);
+        // Manifest name prefix of the prompt templates that the project file embeds into the assembly.
+        private const string EmbeddedPromptPrefix = "TheGodFace.presets.prompts.";
+
+        // Reads the template next to the versioned face preset or from the copy embedded into the assembly.
+        private static string ReadTemplate(string fileName)
+        {
+            string diskPath = PathHelper.GetFullPath(Path.Combine("presets", "prompts", fileName));
+            if (File.Exists(diskPath)) return File.ReadAllText(diskPath, Encoding.UTF8);
+
+            // A packaged exe without the presets folder still gets the shipped prompt template.
+            using Stream? embedded = typeof(Ic0nPromptBuilder).Assembly.GetManifestResourceStream(EmbeddedPromptPrefix + fileName);
+            if (embedded == null) throw new FileNotFoundException($"Шаблон промпта {fileName} не найден ни на диске, ни в сборке.");
+
+            using var reader = new StreamReader(embedded, Encoding.UTF8);
+            return reader.ReadToEnd();
+        }
 
         // Builds the model prompt from the sitting pose and the allowed preset names.
         public static string BuildFlashLitePrompt(

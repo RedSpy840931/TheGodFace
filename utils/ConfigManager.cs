@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
 using TheGodFace.Models;
 
@@ -15,6 +16,8 @@ namespace TheGodFace.Utils
         private const string ConfigFileName = "face_config.json";
         // Folder that holds the versioned face preset together with the prompt templates.
         private const string ConfigFolder = "presets";
+        // Manifest name of the default pose that the project file embeds into the assembly.
+        private const string EmbeddedConfigFileName = "TheGodFace.presets.face_config.json";
 
         // Resolved once at startup so the path never depends on the process working directory.
         private static readonly string ConfigPath = ResolveConfigPath();
@@ -37,12 +40,24 @@ namespace TheGodFace.Utils
             catch (Exception ex) { Console.WriteLine($"������ ����������: {ex.Message}"); }
         }
 
-        // Reads the config file into a FaceConfig, returning null when it is missing or broken.
+        // Reads the config from presets, falling back to the copy embedded into the assembly.
         public static FaceConfig? Load()
         {
-            if (!File.Exists(ConfigPath)) return null;
-            try { return JsonSerializer.Deserialize<FaceConfig>(File.ReadAllText(ConfigPath)); }
-            catch (Exception) { return null; }
+            try
+            {
+                if (File.Exists(ConfigPath))
+                    return JsonSerializer.Deserialize<FaceConfig>(File.ReadAllText(ConfigPath));
+
+                // A packaged exe without the presets folder still starts with the shipped default pose.
+                using Stream? embedded = typeof(ConfigManager).Assembly.GetManifestResourceStream(EmbeddedConfigFileName);
+                if (embedded != null)
+                {
+                    using var reader = new StreamReader(embedded, Encoding.UTF8);
+                    return JsonSerializer.Deserialize<FaceConfig>(reader.ReadToEnd());
+                }
+            }
+            catch (Exception) { }
+            return null;
         }
 
         // Uses the presets folder next to the sources and migrates an old copy out of the build output.

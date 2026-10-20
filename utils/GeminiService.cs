@@ -79,10 +79,10 @@ namespace TheGodFace.Utils
             int currentStress,
             Action<FaceStateResponse>? onIntermediateResponse = null)
         {
-            // Prompt template filled with the current presets so the model picks names that exist.
-            string prompt = Ic0nPromptBuilder.BuildFlashLitePrompt(availableMouths, availableBrows, availableCheeks, currentMouth, currentBrow, currentCheek, currentStress);
             try
             {
+                // Prompt template filled with the current presets so the model picks names that exist.
+                string prompt = Ic0nPromptBuilder.BuildFlashLitePrompt(availableMouths, availableBrows, availableCheeks, currentMouth, currentBrow, currentCheek, currentStress);
                 var (raw, model) = await ExecuteCascadeAsync(_flashLiteCascade, prompt, userMessage, fallbackModel =>
                 {
                     // Interim pose shown while the next model of the cascade is being called.
