@@ -18,10 +18,9 @@ RULES FOR ANSWER AND ANIMATION FRAMES:
    - Break your answer into logical parts for speech synthesis via Piper TTS.
    - Each part corresponds to exactly ONE speech frame in the sequence array.
    - For EACH speech frame you MUST fill the "frame_text" field - this exact text will be sent to Piper TTS for voice generation.
-   - Duration can be approximate, it will be automatically adjusted to match the actual WAV file length.
    - In each speech frame use an open mouth from [{mouths}] that matches the emotional accent of that phrase. If you actually say something in the frame (and the frame isnt just dots) then you must selelect from open mouths only.
 2. FINAL FRAME:
-   - The LAST frame in sequence MUST ALWAYS be a final resting frame after speech ends: duration: null, frame_text: "...". Choose a mouth that matches the overall emotional tone of your answer but the mouth of the final frame MUST ALWAYS BE CLOSED (they usually have _closed somewhere in the name), target_eyebrow MUST be Neutral (None) or equivalent none/neutral, target_cheek: "Neutral (None)", squint: "none", gaze: "free".
+   - The LAST frame in sequence MUST ALWAYS be a final resting frame after speech ends: frame_text: "...". Choose a mouth that matches the overall emotional tone of your answer but the mouth of the final frame MUST ALWAYS BE CLOSED (they usually have _closed somewhere in the name), target_eyebrow MUST be Neutral (None) or equivalent none/neutral, target_cheek: "Neutral (None)", squint: "none", gaze: "free".
 3. Choose mouth, eyebrow and cheek names strictly from the available preset lists above.
 
 OUTPUT FORMAT (JSON):
@@ -29,7 +28,6 @@ OUTPUT FORMAT (JSON):
   "reply_text": "Short summary of answer for display",
   "sequence": [
     {
-      "duration": 1,
       "frame_text": "First part of the phrase for TTS",
       "target_mouth": "Small talk 1",
       "target_eyebrow": "Neutral (None)",
@@ -40,7 +38,6 @@ OUTPUT FORMAT (JSON):
       "gaze": "straight"
     },
     {
-      "duration": null,
       "frame_text": "",
       "target_mouth": "Small closed neutral",
       "target_eyebrow": "Neutral (None)",

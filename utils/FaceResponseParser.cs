@@ -43,7 +43,6 @@ namespace TheGodFace.Utils
                 {
                     new FaceFrame
                     {
-                        duration = null,
                         target_mouth = "Small closed neutral",
                         target_eyebrow = "Neutral (None)",
                         target_cheek = "Neutral (None)",
@@ -119,7 +118,6 @@ namespace TheGodFace.Utils
             {
                 new FaceFrame
                 {
-                    duration = null,
                     target_mouth = "Small closed neutral",
                     target_eyebrow = "Neutral (None)",
                     target_cheek = "Neutral (None)",

@@ -282,13 +282,12 @@ namespace TheGodFace
                 {
                     var warmupTts = PiperTtsService.Instance;
                     await warmupTts.EnsureInitializedAsync();
-                    await warmupTts.SynthesizeAsync(".");
-                    // Clean up warmup file
-                    string tempDir = System.IO.Path.GetTempPath();
-                    foreach (var f in System.IO.Directory.GetFiles(tempDir, "ic0n_tts_*.wav"))
-                    {
-                        try { System.IO.File.Delete(f); } catch { }
-                    }
+
+                    // The warmup line must be speakable, otherwise Piper skips the wav and the model load stays unconfirmed.
+                    string warmupFile = await warmupTts.SynthesizeAsync("test");
+
+                    // The warmup wav is never played, delete only this file so a pending frame cannot lose its audio.
+                    try { if (System.IO.File.Exists(warmupFile)) System.IO.File.Delete(warmupFile); } catch { }
                 }
                 catch { }
             });
@@ -311,7 +310,7 @@ namespace TheGodFace
 
             ApplyLoadedConfig(_loadedConfig);
             _geminiService ??= new GeminiService();
-            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
+            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text), frame => Dispatcher.Invoke(() => ApplyFaceFrame(frame)));
             ShowFaceAndChat();
 
             // Stretch the face from the line to full height, which ends the handover.
@@ -463,7 +462,7 @@ namespace TheGodFace
             string userText = UserInputBox.Text;
             if (string.IsNullOrWhiteSpace(userText)) return;
             _geminiService ??= new GeminiService();
-            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
+            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text), frame => Dispatcher.Invoke(() => ApplyFaceFrame(frame)));
             AiReplyText.Text = "Думаю...";
             AiReplyText.Foreground = Brushes.Gray;
             _idleCts?.Cancel();
@@ -515,7 +514,7 @@ namespace TheGodFace
             var token = _sequencePlaybackCts.Token;
             try
             {
-                _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
+                _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text), frame => Dispatcher.Invoke(() => ApplyFaceFrame(frame)));
                 await _audioSequencePlayer.PlaySequenceWithTtsAsync(sequence, token);
             }
             catch (TaskCanceledException) { }
@@ -540,11 +539,9 @@ namespace TheGodFace
                     if (token.IsCancellationRequested) break;
                     var frame = sequence[i];
                     ApplyFaceFrame(frame);
-                    if (frame.duration.HasValue && frame.duration.Value > 0)
-                    {
-                        double delaySec = Math.Clamp(frame.duration.Value, 0.2, 5.0);
-                        await Task.Delay(TimeSpan.FromSeconds(delaySec), token);
-                    }
+
+                    // The model no longer sends a duration, so silent playback holds each frame for a fixed beat.
+                    await Task.Delay(TimeSpan.FromSeconds(1.0), token);
                 }
             }
             catch (TaskCanceledException) { }

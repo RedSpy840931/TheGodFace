@@ -10,7 +10,6 @@ namespace TheGodFace.Utils
     // One pose in an animation sequence, mirrored by the JSON schema the model answers with.
     public class FaceFrame
     {
-        public double? duration { get; set; }
         public string? frame_text { get; set; }
         public string? target_mouth { get; set; }
         public string? target_eyebrow { get; set; }
@@ -90,7 +89,7 @@ namespace TheGodFace.Utils
                     onIntermediateResponse?.Invoke(new FaceStateResponse
                     {
                         reply_text = $"Переключаюсь на резерв {fallbackModel}...",
-                        sequence = new List<FaceFrame> { new FaceFrame { duration = 1, target_mouth = "Small displeased", target_eyebrow = "Asymmetric Doubt", stress_level = 2, gaze = "straight" } }
+                        sequence = new List<FaceFrame> { new FaceFrame { target_mouth = "Small displeased", target_eyebrow = "Asymmetric Doubt", stress_level = 2, gaze = "straight" } }
                     });
                 });
 
@@ -106,8 +105,8 @@ namespace TheGodFace.Utils
                     UsedModel = "Ошибка",
                     sequence = new List<FaceFrame>
                     {
-                        new FaceFrame { duration = 2, target_mouth = "Pog", target_eyebrow = "Shock / Surprise", stress_level = 3, sweat_drop = true, gaze = "straight" },
-                        new FaceFrame { duration = null, target_mouth = "Small frown", target_eyebrow = "Concerned", stress_level = 2, sweat_drop = true, gaze = "free" }
+                        new FaceFrame { target_mouth = "Pog", target_eyebrow = "Shock / Surprise", stress_level = 3, sweat_drop = true, gaze = "straight" },
+                        new FaceFrame { target_mouth = "Small frown", target_eyebrow = "Concerned", stress_level = 2, sweat_drop = true, gaze = "free" }
                     }
                 };
             }

@@ -1,184 +1,223 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using System.Threading;
-using System.Windows.Controls;
+using System.Threading.Tasks;
 using NAudio.Wave;
 using TheGodFace.Utils;
 
 namespace TheGodFace.Utils
 {
-    // Plays audio sequences frame by frame in sync with animation
+    // Plays generated speech frame by frame and shows the face pose attached to the same frame
     public class AudioSequencePlayer : IDisposable
     {
-        private readonly List<AudioFrame> _frames = new List<AudioFrame>();
-        private int _currentFrameIndex = -1;
+        // Fallback hold time for a frame when Piper produced no audio file
+        private const double SilentFrameSeconds = 1.0;
+
+        private readonly PiperTtsService _ttsService;
+        private readonly Action<int, string> _onFrameTextUpdate;
+        private readonly Action<FaceFrame> _onFaceFrameUpdate;
         private WaveOutEvent _waveOut;
         private AudioFileReader _audioReader;
         private bool _disposed;
-        private static PiperTtsService _sharedTtsService;
-        private readonly PiperTtsService _ttsService;
-        private readonly Action<int, string> _onFrameTextUpdate;
-        private Task<string> _nextAudioTask;
-        private int _nextFrameIndex = 0;
 
-        public class AudioFrame
+        // One spoken frame: its text, the wav Piper wrote for it and the pose to show meanwhile
+        private class AudioFrame
         {
             public string Text { get; set; }
             public string AudioFilePath { get; set; }
             public bool IsGenerated { get; set; }
+            public FaceFrame FaceFrame { get; set; }
         }
 
-        public AudioSequencePlayer(Action<int, string> onFrameTextUpdate = null)
+        // Stores the callbacks MainWindow uses to update the reply text and the face
+        public AudioSequencePlayer(Action<int, string> onFrameTextUpdate = null, Action<FaceFrame> onFaceFrameUpdate = null)
         {
-            if (_sharedTtsService == null)
-            {
-                _sharedTtsService = PiperTtsService.Instance;
-            }
-            _ttsService = _sharedTtsService;
+            _ttsService = PiperTtsService.Instance;
             _onFrameTextUpdate = onFrameTextUpdate;
+            _onFaceFrameUpdate = onFaceFrameUpdate;
         }
 
-        // Add frame with text to be synthesized
-        public void AddFrame(string text)
+        // Turns the model sequence into internal frames, keeping the pose next to its text
+        private static List<AudioFrame> BuildFrames(List<FaceFrame> sequence)
         {
-            _frames.Add(new AudioFrame
-            {
-                Text = text,
-                IsGenerated = false
-            });
-        }
+            var frames = new List<AudioFrame>(sequence.Count);
 
-        // Pre-generate all audio files
-        public async Task PreGenerateAllAsync()
-        {
-            // Start generating first frame
-            if (_frames.Count > 0 && !_frames[0].IsGenerated)
+            foreach (var frame in sequence)
             {
-                _nextAudioTask = GenerateFrameAudioAsync(0);
-                await _nextAudioTask;
-                _nextFrameIndex = 1;
-            }
-
-            // Pre-generate remaining in pipeline
-            for (int i = 1; i < _frames.Count; i++)
-            {
-                if (!_frames[i].IsGenerated)
+                frames.Add(new AudioFrame
                 {
-                    var currentTask = _nextAudioTask;
-                    _nextAudioTask = GenerateFrameAudioAsync(i);
-                    await currentTask;
-                    _nextFrameIndex = i + 1;
-                }
+                    Text = frame?.frame_text ?? "",
+                    IsGenerated = false,
+                    FaceFrame = frame
+                });
             }
-            
-            if (_nextAudioTask != null)
-            {
-                await _nextAudioTask;
-            }
+
+            return frames;
         }
 
-        private async Task<string> GenerateFrameAudioAsync(int frameIndex)
+        // True when Piper can actually speak the text, dots and spaces count as silence
+        private static bool IsSpeakable(string text)
         {
-            if (frameIndex < 0 || frameIndex >= _frames.Count)
-                return null;
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
 
-            var frame = _frames[frameIndex];
-            if (frame.IsGenerated && !string.IsNullOrEmpty(frame.AudioFilePath))
+            foreach (char c in text)
+            {
+                if (char.IsLetterOrDigit(c))
+                    return true;
+            }
+
+            return false;
+        }
+
+        // Synthesizes one frame and returns the wav path, null when the frame is silent or synthesis failed
+        private async Task<string> GenerateFrameAudioAsync(AudioFrame frame)
+        {
+            // Mark as generated first, so a failed frame is not retried in a loop
+            if (frame.IsGenerated)
                 return frame.AudioFilePath;
 
-            frame.AudioFilePath = await _ttsService.SynthesizeAsync(frame.Text);
             frame.IsGenerated = true;
+
+            if (!IsSpeakable(frame.Text))
+                return null;
+
+            try
+            {
+                frame.AudioFilePath = await _ttsService.SynthesizeAsync(frame.Text);
+            }
+            catch (Exception ex)
+            {
+                // A failed frame must not break the sequence, the face still gets its time
+                frame.AudioFilePath = null;
+                System.Diagnostics.Debug.WriteLine($"TTS frame failed: {ex.Message}");
+            }
+
             return frame.AudioFilePath;
         }
 
-        // Play sequence starting from beginning
-        public async Task PlayAsync()
+        // Plays every frame, applying its pose and reply text, and uses the real wav length as the frame clock
+        public async Task PlaySequenceWithTtsAsync(List<FaceFrame> sequence, CancellationToken token = default)
         {
-            if (_frames.Count == 0)
+            if (sequence == null || sequence.Count == 0)
                 return;
 
-            // Ensure first frame is ready
-            if (!_frames[0].IsGenerated)
+            // Own frame list per call, so a cancelled run cannot corrupt the next one
+            var frames = BuildFrames(sequence);
+
+            Stop();
+
+            // The first frame is synthesized before playback, the rest are generated while the previous one sounds
+            Task<string> nextAudioTask = GenerateFrameAudioAsync(frames[0]);
+
+            for (int i = 0; i < frames.Count; i++)
             {
-                await GenerateFrameAudioAsync(0);
-                _nextFrameIndex = 1;
-                if (_nextFrameIndex < _frames.Count)
-                {
-                    _nextAudioTask = GenerateFrameAudioAsync(_nextFrameIndex);
-                    _nextFrameIndex++;
-                }
-            }
-            else if (_nextFrameIndex <= 1 && _frames.Count > 1)
-            {
-                // Start pipeline if not started
-                if (_nextAudioTask == null)
-                {
-                    _nextAudioTask = GenerateFrameAudioAsync(1);
-                    _nextFrameIndex = 2;
-                }
-            }
+                if (token.IsCancellationRequested)
+                    return;
 
-            for (int i = 0; i < _frames.Count; i++)
-            {
-                _currentFrameIndex = i;
-                
-                // Update text for current frame
-                if (_onFrameTextUpdate != null)
+                var frame = frames[i];
+                bool speakable = IsSpeakable(frame.Text);
+
+                // Pose first, so the face reacts even while its audio is still being synthesized
+                if (_onFaceFrameUpdate != null && frame.FaceFrame != null)
                 {
-                    _onFrameTextUpdate(i, _frames[i].Text);
+                    _onFaceFrameUpdate(frame.FaceFrame);
                 }
 
-                // Ensure current frame audio is ready
-                if (!_frames[i].IsGenerated)
+                // Silent frames (the resting pose) keep the previous reply line untouched
+                if (_onFrameTextUpdate != null && speakable)
                 {
-                    await GenerateFrameAudioAsync(i);
+                    _onFrameTextUpdate(i, frame.Text);
                 }
 
-                // Start generating next frame while current plays (pipeline)
-                Task nextGenTask = null;
-                if (i + 1 < _frames.Count && !_frames[i + 1].IsGenerated)
+                // Wait for the audio of this frame, the task was started before the previous frame finished
+                if (nextAudioTask != null)
                 {
-                    nextGenTask = GenerateFrameAudioAsync(i + 1);
+                    await nextAudioTask;
+                    nextAudioTask = null;
                 }
 
-                // Play current frame
-                await PlayAudioFileAsync(_frames[i].AudioFilePath);
+                if (token.IsCancellationRequested)
+                    return;
 
-                // Wait for next generation if it was started
-                if (nextGenTask != null)
+                // Start the next frame synthesis so it overlaps with the current playback
+                if (i + 1 < frames.Count && !frames[i + 1].IsGenerated)
                 {
-                    await nextGenTask;
+                    nextAudioTask = GenerateFrameAudioAsync(frames[i + 1]);
+                }
+
+                if (!speakable)
+                    continue;
+
+                bool played = await PlayAudioFileAsync(frame.AudioFilePath, token);
+
+                if (token.IsCancellationRequested)
+                    return;
+
+                // No audio for this frame, hold the pose for a moment so the animation stays visible
+                if (!played)
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(SilentFrameSeconds), token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
                 }
             }
         }
 
-        private async Task PlayAudioFileAsync(string filePath)
+        // Plays one wav file and returns when it ends or the token cancels, false when there was nothing to play
+        private async Task<bool> PlayAudioFileAsync(string filePath, CancellationToken token)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                return;
+                return false;
 
             var tcs = new TaskCompletionSource<bool>();
+            WaveOutEvent waveOut = null;
 
             try
             {
                 _audioReader = new AudioFileReader(filePath);
-                _waveOut = new WaveOutEvent();
-                _waveOut.Init(_audioReader);
-                _waveOut.PlaybackStopped += (s, e) => tcs.TrySetResult(true);
-                _waveOut.Play();
+                waveOut = new WaveOutEvent();
+                _waveOut = waveOut;
+                waveOut.Init(_audioReader);
 
-                await tcs.Task;
+                // PlaybackStopped fires on a worker thread, so the awaiting loop continues on the UI context
+                waveOut.PlaybackStopped += (s, e) => tcs.TrySetResult(true);
+
+                // Cancel only this device, never whichever wav a newer sequence has already started
+                using (token.Register(() =>
+                {
+                    try { waveOut.Stop(); } catch { }
+                    tcs.TrySetResult(true);
+                }))
+                {
+                    waveOut.Play();
+                    await tcs.Task;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Audio playback failed: {ex.Message}");
+                return false;
             }
             finally
             {
-                _waveOut?.Dispose();
-                _audioReader?.Dispose();
-                _waveOut = null;
+                try { waveOut?.Dispose(); } catch { }
+                try { _audioReader?.Dispose(); } catch { }
+
+                if (ReferenceEquals(_waveOut, waveOut))
+                    _waveOut = null;
+
                 _audioReader = null;
 
-                // Clean up temp file
+                // Temp wav is not needed after playback
                 try
                 {
                     if (File.Exists(filePath))
@@ -188,6 +227,7 @@ namespace TheGodFace.Utils
             }
         }
 
+        // Stops the current wav, used when a new answer replaces the running sequence
         public void Stop()
         {
             try
@@ -197,35 +237,7 @@ namespace TheGodFace.Utils
             catch { }
         }
 
-        // Compatibility method for old API
-        public async Task PlaySequenceWithTtsAsync(List<FaceFrame> sequence, System.Threading.CancellationToken token = default)
-        {
-            if (sequence == null || sequence.Count == 0)
-                return;
-
-            // Clear existing frames
-            _frames.Clear();
-            
-            foreach (var frame in sequence)
-            {
-                string text = frame.frame_text ?? "";
-                if (!string.IsNullOrWhiteSpace(text))
-                {
-                    AddFrame(text);
-                }
-                else
-                {
-                    AddFrame(" ");
-                }
-            }
-
-            // Play with cancellation support
-            if (token.IsCancellationRequested)
-                return;
-
-            await PlayAsync();
-        }
-
+        // Releases the audio device and forgets the current frame
         public void Dispose()
         {
             if (_disposed)
@@ -234,9 +246,10 @@ namespace TheGodFace.Utils
             _disposed = true;
 
             Stop();
-            _waveOut?.Dispose();
-            _audioReader?.Dispose();
-            _frames.Clear();
+            try { _waveOut?.Dispose(); } catch { }
+            try { _audioReader?.Dispose(); } catch { }
+            _waveOut = null;
+            _audioReader = null;
         }
     }
 }
