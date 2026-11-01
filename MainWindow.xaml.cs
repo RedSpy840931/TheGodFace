@@ -110,6 +110,8 @@ namespace TheGodFace
         private readonly Random _random = new Random();
 
         private GeminiService? _geminiService;
+        private string _lastModelTag = "";
+        private AudioSequencePlayer? _audioSequencePlayer;
 
         // Splash animator that plays the initialization GIF on FaceCanvas.
         private InitializerAnimator? _initAnimator;
@@ -244,6 +246,22 @@ namespace TheGodFace
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
             Toggle3DMode(true);
+            try
+            {
+                var ws = WindowStateManager.Load();
+                if (ws != null)
+                {
+                    if (!double.IsNaN(ws.WindowLeft)) this.Left = ws.WindowLeft;
+                    if (!double.IsNaN(ws.WindowTop)) this.Top = ws.WindowTop;
+                    if (!double.IsNaN(ws.CameraZ)) MainCamera.Position = new System.Windows.Media.Media3D.Point3D(0, 0, ws.CameraZ);
+                    if (!double.IsNaN(ws.CubeRotationX)) _cubeRotX = ws.CubeRotationX;
+                    if (!double.IsNaN(ws.CubeRotationY)) _cubeRotY = ws.CubeRotationY;
+                    CubeRotX.Angle = _cubeRotX;
+                    CubeRotY.Angle = _cubeRotY;
+                    _isSubmissiveMode = ws.IsSubmissiveMode;
+                }
+            }
+            catch { }
             GetCursorPos(out Win32Point pt);
             _lastGlobalMousePos = new Point(pt.X, pt.Y);
 
@@ -256,6 +274,23 @@ namespace TheGodFace
                 Centered = WindowState == WindowState.Maximized
             };
             _initAnimator.Start();
+
+            // Warm up Piper TTS during splash to avoid cold start
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var warmupTts = new PiperTtsService("ic0n_voice.onnx");
+                    await warmupTts.SynthesizeAsync(".");
+                    // Clean up warmup file
+                    string tempDir = System.IO.Path.GetTempPath();
+                    foreach (var f in System.IO.Directory.GetFiles(tempDir, "ic0n_tts_*.wav"))
+                    {
+                        try { System.IO.File.Delete(f); } catch { }
+                    }
+                }
+                catch { }
+            });
 
             // Wait for the start GIF to reach its last frame.
             await _initAnimator.StartCompleted;
@@ -275,6 +310,7 @@ namespace TheGodFace
 
             ApplyLoadedConfig(_loadedConfig);
             _geminiService ??= new GeminiService();
+            _audioSequencePlayer ??= new AudioSequencePlayer(this);
             ShowFaceAndChat();
 
             // Stretch the face from the line to full height, which ends the handover.
@@ -400,6 +436,20 @@ namespace TheGodFace
         // Cancels the splash and every background loop when the window closes.
         private void MainWindow_Closed(object? sender, EventArgs e)
         {
+            try
+            {
+                var ws = new WindowStateConfig
+                {
+                    WindowLeft = this.Left,
+                    WindowTop = this.Top,
+                    CameraZ = MainCamera?.Position.Z ?? DefaultCameraZ,
+                    CubeRotationX = _cubeRotX,
+                    CubeRotationY = _cubeRotY,
+                    IsSubmissiveMode = _isSubmissiveMode
+                };
+                WindowStateManager.Save(ws);
+            }
+            catch { }
             _initAnimator?.Cancel();
             _appLifetimeCts.Cancel();
             _idleCts?.Cancel();
@@ -412,6 +462,7 @@ namespace TheGodFace
             string userText = UserInputBox.Text;
             if (string.IsNullOrWhiteSpace(userText)) return;
             _geminiService ??= new GeminiService();
+            _audioSequencePlayer ??= new AudioSequencePlayer(this);
             AiReplyText.Text = "Думаю...";
             AiReplyText.Foreground = Brushes.Gray;
             _idleCts?.Cancel();
@@ -437,20 +488,42 @@ namespace TheGodFace
                 currentStress,
                 onIntermediateResponse: inter => Dispatcher.Invoke(() =>
                 {
-                    AiReplyText.Text = $"ic-0n [{inter.UsedModel ?? "резерв"}]: {inter.reply_text}";
-                    AiReplyText.Foreground = Brushes.Yellow;
-                    if (inter.sequence != null && inter.sequence.Count > 0) _ = PlaySequenceAsync(inter.sequence);
+                    _lastModelTag = !string.IsNullOrEmpty(inter.UsedModel) ? $"[{inter.UsedModel}] " : "[резерв] ";
+                    AiReplyText.Text = "Думаю...";
+                    AiReplyText.Foreground = Brushes.Gray;
+                    if (inter.sequence != null && inter.sequence.Count > 0) _ = PlaySequenceWithTtsAsync(inter.sequence);
                 })
             );
 
             Dispatcher.Invoke(() =>
             {
-                string modelTag = !string.IsNullOrEmpty(response.UsedModel) ? $"[{response.UsedModel}] " : "";
-                AiReplyText.Text = $"ic-0n {modelTag}: {response.reply_text}";
-                AiReplyText.Foreground = Brushes.LightGreen;
-                if (response.sequence != null && response.sequence.Count > 0) _ = PlaySequenceAsync(response.sequence);
+                string modelTag = !string.IsNullOrEmpty(response.UsedModel) ? $"[{response.UsedModel}] " : "[резерв] ";
+                _lastModelTag = modelTag;
+                AiReplyText.Text = "Думаю...";
+                AiReplyText.Foreground = Brushes.Gray;
+                if (response.sequence != null && response.sequence.Count > 0) _ = PlaySequenceWithTtsAsync(response.sequence);
                 else { this.GazeFree = true; UpdateEyeVisibility(); RefreshAll(); }
             });
+        }
+
+        // Plays sequence with Piper TTS synchronization
+        public async Task PlaySequenceWithTtsAsync(List<FaceFrame> sequence)
+        {
+            _sequencePlaybackCts?.Cancel();
+            _sequencePlaybackCts = new CancellationTokenSource();
+            var token = _sequencePlaybackCts.Token;
+            try
+            {
+                _audioSequencePlayer ??= new AudioSequencePlayer(this);
+                await _audioSequencePlayer.PlaySequenceWithTtsAsync(sequence, token);
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                // Fallback to old playback
+                try { await PlaySequenceAsync(sequence); } catch { }
+                System.Diagnostics.Debug.WriteLine($"TTS playback error: {ex.Message}");
+            }
         }
 
         // Plays a model sequence frame by frame and cancels any sequence still running.
@@ -477,7 +550,26 @@ namespace TheGodFace
         }
 
         // Maps one model frame onto the sliders and picks the closest named presets in Mouths, Eyebrows and Cheeks.
-        private void ApplyFaceFrame(FaceFrame frame)
+        public void SetAiReplyText(string text, System.Windows.Media.Brush? color = null)
+        {
+            try
+            {
+                if (AiReplyText != null)
+                {
+                    string display = text ?? string.Empty;
+                    if (!string.IsNullOrEmpty(display) && !display.StartsWith("ic-0n"))
+                    {
+                        display = $"ic-0n {_lastModelTag}: {display}";
+                    }
+                    AiReplyText.Text = display;
+                    if (color != null) AiReplyText.Foreground = color;
+                    else AiReplyText.Foreground = System.Windows.Media.Brushes.LightGreen;
+                }
+            }
+            catch { }
+        }
+
+        public void ApplyFaceFrame(FaceFrame frame)
         {
             this.StressSlider.Value = Math.Clamp(frame.stress_level, 1, 3);
             this.HasSweatDrop = frame.sweat_drop;

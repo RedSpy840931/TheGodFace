@@ -1,4 +1,4 @@
-// Version: 40 stable
+﻿// Version: 40 stable
 using System.ComponentModel;
 using System.Text.Json.Serialization;
 using TheGodFace.Utils;
@@ -225,4 +225,16 @@ namespace TheGodFace.Models
             new CheekPreset { Name = "New Cheeks", IsVisible = true, IsExpanded = false, LeftOffset = 7.804878048780504, RightOffset = 7.804878048780504 }
         };
     }
+
+    // Runtime window state saved separately on close.
+    public class WindowStateConfig
+    {
+        public double WindowLeft { get; set; }
+        public double WindowTop { get; set; }
+        public double CameraZ { get; set; } = 5.0;
+        public double CubeRotationX { get; set; } = 0;
+        public double CubeRotationY { get; set; } = 0;
+        public bool IsSubmissiveMode { get; set; } = false;
+    }
+
 }

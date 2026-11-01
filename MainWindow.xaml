@@ -374,8 +374,8 @@
             <StackPanel Orientation="Vertical" Width="400">
                 <TextBlock x:Name="AiReplyText" Text="Ассистент спит..." Foreground="LightGreen" TextWrapping="Wrap" Margin="0,0,0,10" FontSize="14" FontWeight="Bold"/>
                 <StackPanel Orientation="Horizontal">
-                    <TextBox x:Name="UserInputBox" Width="300" Height="30" Padding="5" Background="#333" Foreground="White" BorderThickness="1" BorderBrush="#555" Text="Скажи что-нибудь саркастичное про мою архитектуру кода!"/>
-                    <Button Content="SEND" Width="80" Height="30" Margin="10,0,0,0" Background="#444" Foreground="White" BorderThickness="0" Click="TestAiButton_Click"/>
+                    <TextBox x:Name="UserInputBox" Width="300" Height="60" Padding="5" Background="#333" Foreground="White" BorderThickness="1" BorderBrush="#555" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="Скажи что-нибудь саркастичное про мою архитектуру кода!"/>
+                    <Button Content="SEND" Width="80" Height="60" Margin="10,0,0,0" Background="#444" Foreground="White" BorderThickness="0" Click="TestAiButton_Click"/>
                 </StackPanel>
             </StackPanel>
         </Border>

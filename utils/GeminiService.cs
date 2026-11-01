@@ -11,6 +11,7 @@ namespace TheGodFace.Utils
     public class FaceFrame
     {
         public double? duration { get; set; }
+        public string? frame_text { get; set; }
         public string? target_mouth { get; set; }
         public string? target_eyebrow { get; set; }
         public string? target_cheek { get; set; }

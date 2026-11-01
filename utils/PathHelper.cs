@@ -73,5 +73,38 @@ namespace TheGodFace.Utils
 
         // Builds the pack URI of a file compiled into the assembly as a WPF resource.
         private static string ToPackUri(string path) => "pack://application:,,,/" + path.Replace('\\', '/');
+
+        // Returns absolute path to piper.exe
+        public static string GetPiperExePath()
+        {
+            string piperDir = System.IO.Path.Combine(BaseAssetsDir, "piper");
+            if (!System.IO.Directory.Exists(piperDir))
+            {
+                piperDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper");
+            }
+            return System.IO.Path.Combine(piperDir, "piper.exe");
+        }
+
+        // Returns absolute path to piper voice model
+        public static string GetPiperVoicePath(string voiceName = "ic0n_voice.onnx")
+        {
+            string piperDir = System.IO.Path.Combine(BaseAssetsDir, "piper");
+            if (!System.IO.Directory.Exists(piperDir))
+            {
+                piperDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper");
+            }
+            return System.IO.Path.Combine(piperDir, voiceName);
+        }
+
+        // Returns absolute path to piper voices directory
+        public static string GetPiperDir()
+        {
+            string piperDir = System.IO.Path.Combine(BaseAssetsDir, "piper");
+            if (!System.IO.Directory.Exists(piperDir))
+            {
+                piperDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "piper");
+            }
+            return piperDir;
+        }
     }
 }
