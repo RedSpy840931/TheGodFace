@@ -1,4 +1,4 @@
-﻿// Version: 48 (TV-style transition: GIF collapses to a line, face stretches out of it)
+// Version: 48 (TV-style transition: GIF collapses to a line, face stretches out of it)
 using System;
 using System.Linq;
 using System.Windows;
@@ -280,7 +280,8 @@ namespace TheGodFace
             {
                 try
                 {
-                    var warmupTts = new PiperTtsService("ic0n_voice.onnx");
+                    var warmupTts = PiperTtsService.Instance;
+                    await warmupTts.EnsureInitializedAsync();
                     await warmupTts.SynthesizeAsync(".");
                     // Clean up warmup file
                     string tempDir = System.IO.Path.GetTempPath();
@@ -310,7 +311,7 @@ namespace TheGodFace
 
             ApplyLoadedConfig(_loadedConfig);
             _geminiService ??= new GeminiService();
-            _audioSequencePlayer ??= new AudioSequencePlayer(this);
+            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
             ShowFaceAndChat();
 
             // Stretch the face from the line to full height, which ends the handover.
@@ -462,7 +463,7 @@ namespace TheGodFace
             string userText = UserInputBox.Text;
             if (string.IsNullOrWhiteSpace(userText)) return;
             _geminiService ??= new GeminiService();
-            _audioSequencePlayer ??= new AudioSequencePlayer(this);
+            _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
             AiReplyText.Text = "Думаю...";
             AiReplyText.Foreground = Brushes.Gray;
             _idleCts?.Cancel();
@@ -514,7 +515,7 @@ namespace TheGodFace
             var token = _sequencePlaybackCts.Token;
             try
             {
-                _audioSequencePlayer ??= new AudioSequencePlayer(this);
+                _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text));
                 await _audioSequencePlayer.PlaySequenceWithTtsAsync(sequence, token);
             }
             catch (TaskCanceledException) { }
