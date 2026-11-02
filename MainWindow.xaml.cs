@@ -6,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
+using System.Windows.Media.Animation;
 using System.Windows.Shapes;
 using System.Diagnostics;
 using System.Threading;
@@ -112,6 +113,23 @@ namespace TheGodFace
         private GeminiService? _geminiService;
         private string _lastModelTag = "";
         private AudioSequencePlayer? _audioSequencePlayer;
+
+        // Console palette is fixed by the design sketch: green for the user, red for IC-0n.
+        private static readonly Brush ConsoleGreenBrush = new SolidColorBrush(Color.FromRgb(0x00, 0xFF, 0x33));
+        private static readonly Brush ConsoleRedBrush = new SolidColorBrush(Color.FromRgb(0xFF, 0x2A, 0x2A));
+        // Resolved from the window resource, so log lines use the same LCD face as the console header.
+        private FontFamily ConsoleFontFamily => (TryFindResource("ConsoleFont") as FontFamily) ?? new FontFamily("Consolas");
+        // True while the console replaces the face on the cube front.
+        private bool _isConsoleOpen = false;
+        // Answer block that grows frame by frame, null between answers.
+        private TextBlock? _consoleAssistantBody;
+        private string _consoleAssistantText = "";
+        // Window drag state for the console, which cannot use DragMove inside the 3D face.
+        private bool _isConsoleDragging = false;
+        private Point _consoleDragOrigin;
+        private Point _consoleDragPointer;
+        // True while the block caret blink animation is running.
+        private bool _caretBlinking = false;
 
         // Splash animator that plays the initialization GIF on FaceCanvas.
         private InitializerAnimator? _initAnimator;
@@ -335,7 +353,7 @@ namespace TheGodFace
                 Task winner = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(10)));
                 if (winner != initTask)
                 {
-                    AiReplyText.Text = "ic-0n: инициализация затянулась, запускаюсь без конфига...";
+                    AppendAssistantText("инициализация затянулась, запускаюсь без конфига...");
                 }
                 else
                 {
@@ -344,7 +362,7 @@ namespace TheGodFace
             }
             catch (Exception ex)
             {
-                AiReplyText.Text = $"ic-0n: ошибка инициализации ({ex.Message}), запускаюсь с дефолтами...";
+                AppendAssistantText($"ошибка инициализации ({ex.Message}), запускаюсь с дефолтами...");
             }
         }
 
@@ -356,7 +374,6 @@ namespace TheGodFace
             RightEyeContainer.Visibility = Visibility.Collapsed;
             MouthsControl.Visibility = Visibility.Collapsed;
             CenterBlushBlurImage.Visibility = Visibility.Collapsed;
-            ChatPanel.Visibility = Visibility.Collapsed;
         }
 
         // Restores the face elements and the chat panel after the splash is gone.
@@ -366,7 +383,6 @@ namespace TheGodFace
             LeftEyeContainer.Visibility = Visibility.Visible;
             RightEyeContainer.Visibility = Visibility.Visible;
             MouthsControl.Visibility = Visibility.Visible;
-            ChatPanel.Visibility = Visibility.Visible;
             UpdateEyeVisibility();
             RefreshAll();
         }
@@ -457,14 +473,10 @@ namespace TheGodFace
         }
 
         // Sends the chat text to GeminiService and plays the returned sequence or keeps the idle gaze.
-        private async void TestAiButton_Click(object sender, RoutedEventArgs e)
+        private async Task SendConsoleMessageAsync(string userText)
         {
-            string userText = UserInputBox.Text;
-            if (string.IsNullOrWhiteSpace(userText)) return;
             _geminiService ??= new GeminiService();
             _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text), frame => Dispatcher.Invoke(() => ApplyFaceFrame(frame)));
-            AiReplyText.Text = "Думаю...";
-            AiReplyText.Foreground = Brushes.Gray;
             _idleCts?.Cancel();
             _sequencePlaybackCts?.Cancel();
 
@@ -489,8 +501,6 @@ namespace TheGodFace
                 onIntermediateResponse: inter => Dispatcher.Invoke(() =>
                 {
                     _lastModelTag = !string.IsNullOrEmpty(inter.UsedModel) ? $"[{inter.UsedModel}] " : "[резерв] ";
-                    AiReplyText.Text = "Думаю...";
-                    AiReplyText.Foreground = Brushes.Gray;
                     if (inter.sequence != null && inter.sequence.Count > 0) _ = PlaySequenceWithTtsAsync(inter.sequence);
                 })
             );
@@ -499,16 +509,18 @@ namespace TheGodFace
             {
                 string modelTag = !string.IsNullOrEmpty(response.UsedModel) ? $"[{response.UsedModel}] " : "[резерв] ";
                 _lastModelTag = modelTag;
-                AiReplyText.Text = "Думаю...";
-                AiReplyText.Foreground = Brushes.Gray;
                 if (response.sequence != null && response.sequence.Count > 0) _ = PlaySequenceWithTtsAsync(response.sequence);
-                else { this.GazeFree = true; UpdateEyeVisibility(); RefreshAll(); }
+                // Without a sequence nothing plays, so the answer text goes into the log instead.
+                else { AppendAssistantText(response.reply_text); this.GazeFree = true; UpdateEyeVisibility(); RefreshAll(); }
             });
         }
 
         // Plays sequence with Piper TTS synchronization
         public async Task PlaySequenceWithTtsAsync(List<FaceFrame> sequence)
         {
+            // The answer starts playing, so the face replaces the console and speaks it.
+            if (_isConsoleOpen) CloseConsole();
+
             _sequencePlaybackCts?.Cancel();
             _sequencePlaybackCts = new CancellationTokenSource();
             var token = _sequencePlaybackCts.Token;
@@ -552,20 +564,293 @@ namespace TheGodFace
         {
             try
             {
-                if (AiReplyText != null)
-                {
-                    string display = text ?? string.Empty;
-                    if (!string.IsNullOrEmpty(display) && !display.StartsWith("ic-0n"))
-                    {
-                        display = $"ic-0n {_lastModelTag}: {display}";
-                    }
-                    AiReplyText.Text = display;
-                    if (color != null) AiReplyText.Foreground = color;
-                    else AiReplyText.Foreground = System.Windows.Media.Brushes.LightGreen;
-                }
+                // Every frame of the answer grows the same IC-0n message in the console.
+                AppendAssistantText(text);
             }
             catch { }
         }
+
+        // Swaps the face for the console on the cube front and puts the caret into the editor.
+        private void OpenConsole()
+        {
+            if (_isConsoleOpen) return;
+            _isConsoleOpen = true;
+            ConsolePanel.Visibility = Visibility.Visible;
+
+            // Focus only works once the panel is laid out inside the 3D visual.
+            Dispatcher.BeginInvoke(new Action(() =>
+            {
+                ConsoleInput.Focus();
+                Keyboard.Focus(ConsoleInput);
+                ShowConsoleCaretNow();
+                ScrollConsoleToEnd();
+            }), DispatcherPriority.Input);
+        }
+
+        // Returns the face and drops the keyboard focus from the console.
+        private void CloseConsole()
+        {
+            if (!_isConsoleOpen) return;
+            _isConsoleOpen = false;
+            ConsolePanel.Visibility = Visibility.Collapsed;
+            StopConsoleCaret();
+            Keyboard.ClearFocus();
+            Focus();
+        }
+
+        // Reads the editor and starts one answer, an empty line is ignored.
+        private void SendConsoleInput()
+        {
+            string userText = ConsoleInput.Text;
+            if (string.IsNullOrWhiteSpace(userText)) return;
+
+            ConsoleInput.Clear();
+            AppendUserMessage(userText.Trim());
+
+            // A fresh IC-0n block appears right away, so the wait for the model is visible in the log.
+            _consoleAssistantBody = null;
+            _consoleAssistantText = "";
+            BeginAssistantMessage();
+            _ = SendConsoleMessageAsync(userText.Trim());
+        }
+
+        // Adds the typed line as an Administrator message, echoed with the prompt mark.
+        private void AppendUserMessage(string text)
+        {
+            ConsoleLog.Children.Add(new TextBlock
+            {
+                Text = "Administrator:",
+                Foreground = ConsoleGreenBrush,
+                FontFamily = ConsoleFontFamily,
+                FontWeight = FontWeights.Bold,
+                FontSize = 34,
+                Margin = new Thickness(0, 20, 0, 4)
+            });
+
+            ConsoleLog.Children.Add(new TextBlock
+            {
+                Text = $"> {text}",
+                Foreground = ConsoleGreenBrush,
+                FontFamily = ConsoleFontFamily,
+                FontSize = 30,
+                TextWrapping = TextWrapping.Wrap
+            });
+
+            ScrollConsoleToEnd();
+        }
+
+        // Starts a new IC-0n message, so each answer gets its own block in the log.
+        private void BeginAssistantMessage()
+        {
+            ConsoleLog.Children.Add(new TextBlock
+            {
+                Text = "IC-0n:",
+                Foreground = ConsoleRedBrush,
+                FontFamily = ConsoleFontFamily,
+                FontWeight = FontWeights.Bold,
+                FontSize = 34,
+                Margin = new Thickness(0, 20, 0, 4)
+            });
+
+            _consoleAssistantBody = new TextBlock
+            {
+                Text = "> ...",
+                Foreground = ConsoleRedBrush,
+                FontFamily = ConsoleFontFamily,
+                FontSize = 30,
+                TextWrapping = TextWrapping.Wrap
+            };
+
+            ConsoleLog.Children.Add(_consoleAssistantBody);
+            _consoleAssistantText = "";
+            ScrollConsoleToEnd();
+        }
+
+        // Appends one frame to the running answer and creates the block on the first frame.
+        private void AppendAssistantText(string? text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return;
+            if (_consoleAssistantBody == null) BeginAssistantMessage();
+
+            string chunk = text.Trim();
+            _consoleAssistantText = _consoleAssistantText.Length == 0 ? chunk : $"{_consoleAssistantText} {chunk}";
+            _consoleAssistantBody!.Text = $"> {_consoleAssistantText}";
+            ScrollConsoleToEnd();
+        }
+
+        // Keeps the newest line visible, layout runs first so the scroll extent is up to date.
+        private void ScrollConsoleToEnd()
+        {
+            Dispatcher.BeginInvoke(new Action(() => ConsoleLogScroll.ScrollToEnd()), DispatcherPriority.Background);
+        }
+
+        // Starts a window drag from empty console space, controls keep their own clicks.
+        private void ConsolePanel_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            if (e.OriginalSource is DependencyObject hit && IsConsoleControl(hit)) return;
+
+            // DragMove does not reach content mapped onto the 3D face, so the window is moved by hand.
+            // The pointer is tracked in window coordinates, which stay stable while the window moves.
+            Point press = e.GetPosition(this);
+            _consoleDragOrigin = new Point(Left, Top);
+            _consoleDragPointer = new Point(Left + press.X, Top + press.Y);
+            _isConsoleDragging = true;
+            ConsolePanel.CaptureMouse();
+        }
+
+        // Moves the window along with the pointer while a console drag is active.
+        private void ConsolePanel_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (!_isConsoleDragging) return;
+            if (e.LeftButton != MouseButtonState.Pressed)
+            {
+                EndConsoleDrag();
+                return;
+            }
+
+            Point local = e.GetPosition(this);
+            Point current = new Point(Left + local.X, Top + local.Y);
+            Left = _consoleDragOrigin.X + (current.X - _consoleDragPointer.X);
+            Top = _consoleDragOrigin.Y + (current.Y - _consoleDragPointer.Y);
+        }
+
+        // Ends a console drag when the button is released.
+        private void ConsolePanel_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            EndConsoleDrag();
+        }
+
+        // Releases the mouse capture taken for the window drag.
+        private void EndConsoleDrag()
+        {
+            if (!_isConsoleDragging) return;
+            _isConsoleDragging = false;
+            ConsolePanel.ReleaseMouseCapture();
+        }
+
+        // Walks up the visual tree to tell the editor and the framed keys from the empty background.
+        private static bool IsConsoleControl(DependencyObject hit)
+        {
+            for (DependencyObject? node = hit; node != null; node = VisualTreeHelper.GetParent(node))
+            {
+                if (node is TextBox || node is ScrollViewer) return true;
+                if (node is FrameworkElement fe && (fe.Name == "ConsoleCloseButton" || fe.Name == "ConsoleSendButton")) return true;
+            }
+            return false;
+        }
+
+        // Escape leaves the console without touching the typed text.
+        private void ConsolePanel_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Escape)
+            {
+                CloseConsole();
+                e.Handled = true;
+            }
+        }
+
+        // Cross in the header returns the face.
+        private void ConsoleCloseButton_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            CloseConsole();
+        }
+
+        // Arrow button sends the current line.
+        private void ConsoleSend_Click(object sender, MouseButtonEventArgs e)
+        {
+            e.Handled = true;
+            SendConsoleInput();
+        }
+
+        // Highlights a framed console key while the cursor is over it.
+        private void ConsoleKey_MouseEnter(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border) border.Background = new SolidColorBrush(Color.FromArgb(0x30, 0x00, 0xFF, 0x33));
+        }
+
+        // Drops the highlight when the cursor leaves the framed key.
+        private void ConsoleKey_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (sender is Border border) border.Background = Brushes.Transparent;
+        }
+
+        // Enter sends the line, Shift+Enter keeps the newline.
+        private void ConsoleInput_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter && (Keyboard.Modifiers & ModifierKeys.Shift) == 0)
+            {
+                e.Handled = true;
+                SendConsoleInput();
+            }
+        }
+
+        // Hides the hint as soon as the editor holds text.
+        private void ConsoleInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (ConsolePlaceholder != null)
+                ConsolePlaceholder.Visibility = ConsoleInput.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        // Starts the hard on/off blink once, the animation keeps itself alive afterwards.
+        private void StartConsoleCaretBlink()
+        {
+            if (_caretBlinking) return;
+
+            var blink = new DoubleAnimationUsingKeyFrames
+            {
+                Duration = TimeSpan.FromMilliseconds(400),
+                RepeatBehavior = RepeatBehavior.Forever
+            };
+            blink.KeyFrames.Add(new DiscreteDoubleKeyFrame(1, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+            blink.KeyFrames.Add(new DiscreteDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromMilliseconds(200))));
+            ConsoleCaret.BeginAnimation(OpacityProperty, blink);
+            _caretBlinking = true;
+        }
+
+        // Shows the block caret at once, so typing never waits for the next blink phase.
+        private void ShowConsoleCaretNow()
+        {
+            if (!_isConsoleOpen) return;
+
+            UpdateConsoleCaretPosition();
+            ConsoleCaret.Visibility = Visibility.Visible;
+            StartConsoleCaretBlink();
+        }
+
+        // Puts the block on the spot the editor reports for the current caret index.
+        private void UpdateConsoleCaretPosition()
+        {
+            if (!_isConsoleOpen) return;
+
+            Rect spot = ConsoleInput.GetRectFromCharacterIndex(ConsoleInput.CaretIndex, false);
+            ConsoleCaret.Width = Math.Max(8, ConsoleInput.FontSize * 0.5);
+            ConsoleCaret.Height = spot.Height > 0 ? spot.Height : ConsoleInput.FontSize + 4;
+            ConsoleCaret.Margin = new Thickness(
+                ConsoleInput.Margin.Left + spot.X,
+                ConsoleInput.Margin.Top + spot.Y,
+                0,
+                0);
+        }
+
+        // Hides the block and drops the blink when the console closes.
+        private void StopConsoleCaret()
+        {
+            _caretBlinking = false;
+            ConsoleCaret.BeginAnimation(OpacityProperty, null);
+            ConsoleCaret.Opacity = 1;
+            ConsoleCaret.Visibility = Visibility.Collapsed;
+        }
+
+        // Keeps the block on the caret when the selection or the caret index moves.
+        private void ConsoleInput_SelectionChanged(object sender, RoutedEventArgs e) => ShowConsoleCaretNow();
+
+        // Starts the blink as soon as the editor takes the keyboard.
+        private void ConsoleInput_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => ShowConsoleCaretNow();
+
+        // Hides the block when the editor loses the keyboard.
+        private void ConsoleInput_LostKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e) => StopConsoleCaret();
 
         public void ApplyFaceFrame(FaceFrame frame)
         {
@@ -892,6 +1177,9 @@ namespace TheGodFace
         // Tilts the cube once the cursor offset passes the head turn threshold.
         private void UpdateCubeRotation(double dx, double dy)
         {
+            // The console owns the front face, so the cube stays upright while it is open.
+            if (_isConsoleOpen) return;
+
             double rotThresholdX = MainGrid.ActualWidth * HeadTurnThresholdRatio;
             double rotThresholdY = MainGrid.ActualHeight * HeadTurnThresholdRatio;
             double overflowX = dx > rotThresholdX ? dx - rotThresholdX : (dx < -rotThresholdX ? dx + rotThresholdX : 0);
@@ -1170,6 +1458,14 @@ namespace TheGodFace
         // Starts dragging the visible mouth image and remembers the offset it had at grab time.
         private void MouthImage_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // Double click on the mouth swaps the face for the console instead of dragging the preset.
+            if (e.ClickCount == 2 && SettingsMenu.Visibility != Visibility.Visible)
+            {
+                e.Handled = true;
+                OpenConsole();
+                return;
+            }
+
             if (sender is FrameworkElement fe && fe.DataContext is MouthPreset m && SettingsMenu.Visibility == Visibility.Visible && m.IsExpanded)
             {
                 _isDraggingMouth = true; _draggedMouth = m;

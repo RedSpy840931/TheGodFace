@@ -26,6 +26,8 @@
   <ItemGroup>
     <!-- Face decals travel inside the assembly, so a copied exe renders without the assets folder. -->
     <Resource Include="assets\**\*.png" />
+    <!-- Console typography travels with the assembly, the LCD font is resolved by pack URI. -->
+    <Resource Include="assets\fonts\*.ttf" />
     <!-- Default pose and prompt templates are embedded as the fallback when presets is missing on disk. -->
     <EmbeddedResource Include="presets\face_config.json" />
     <EmbeddedResource Include="presets\prompts\*.txt" />

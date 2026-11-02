@@ -16,6 +16,8 @@
     <Window.Resources>
         <DiffuseMaterial x:Key="CubeMat" Brush="#121111"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <!-- LCD font from assets, resolved through the assembly resource pack URI. -->
+        <FontFamily x:Key="ConsoleFont">pack://application:,,,/assets/fonts/#a_LCDNova</FontFamily>
 
         <Style TargetType="TabItem">
             <Setter Property="Background" Value="#222"/>
@@ -61,7 +63,7 @@
                                         MouseLeftButtonDown="MouthImage_MouseDown"
                                         MouseMove="MouthImage_MouseMove"
                                         MouseLeftButtonUp="MouthImage_MouseUp"
-                                        Cursor="SizeAll">
+                                        Cursor="Hand">
                                     <Image Source="{Binding FullPath}" Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
                                         <Image.RenderTransform>
                                             <TransformGroup>
@@ -274,6 +276,79 @@
                         <Rectangle x:Name="RightEyeHitBox" Width="120" Height="200" Fill="Transparent" Panel.ZIndex="100"
                                    MouseLeftButtonDown="RightEyeHitBox_MouseDown" MouseLeftButtonUp="RightEyeHitBox_MouseUp" MouseLeave="RightEyeHitBox_MouseLeave"/>
                     </Canvas>
+
+                    <!-- Console drawn straight onto the face canvas, so it tilts and scales with the cube -->
+                    <Grid x:Name="ConsolePanel" Canvas.Left="0" Canvas.Top="0" Panel.ZIndex="200"
+                          Width="{Binding ActualWidth, ElementName=FaceCanvas}"
+                          Height="{Binding ActualHeight, ElementName=FaceCanvas}"
+                          Background="Black" Visibility="Collapsed"
+                          MouseLeftButtonDown="ConsolePanel_MouseDown"
+                          MouseMove="ConsolePanel_MouseMove" MouseLeftButtonUp="ConsolePanel_MouseLeftButtonUp"
+                          PreviewKeyDown="ConsolePanel_PreviewKeyDown">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <!-- Header row: title on the left, framed close key on the right, both on one baseline -->
+                        <Grid Grid.Row="0" Margin="56,20,20,20">
+                            <TextBlock Text="Console:" FontFamily="{StaticResource ConsoleFont}" Foreground="#00FF33" FontWeight="Bold"
+                                       FontSize="44" VerticalAlignment="Center"/>
+                            <Border x:Name="ConsoleCloseButton" Width="80" Height="80" HorizontalAlignment="Right"
+                                    Background="Transparent" BorderBrush="#00FF33" BorderThickness="4" Cursor="Hand"
+                                    MouseLeftButtonDown="ConsoleCloseButton_MouseDown"
+                                    MouseEnter="ConsoleKey_MouseEnter" MouseLeave="ConsoleKey_MouseLeave">
+                                <TextBlock Text="⨉" Foreground="#00FF33" FontSize="46"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- Hairline that separates the header from the message log -->
+                        <Rectangle Grid.Row="1" Height="4" Fill="#00FF33"/>
+                        
+                        <!-- Message log scrolls once the answer no longer fits -->
+                        <ScrollViewer x:Name="ConsoleLogScroll" Grid.Row="2" Margin="56,22,56,18"
+                                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="ConsoleLog"/>
+                        </ScrollViewer>
+
+                        <!-- Input row: underscored editor with the send key attached on the right -->
+                        <Grid Grid.Row="3" Margin="56,0,20,20">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Border Grid.Column="0" BorderBrush="#00FF33" BorderThickness="0,0,0,4" Padding="2,8,16,8">
+                                <Grid MinHeight="64">
+                                    <TextBox x:Name="ConsoleInput" Background="Transparent" BorderThickness="0" Foreground="#00FF33"
+                                             CaretBrush="Transparent" FontFamily="{StaticResource ConsoleFont}" FontSize="32"
+                                             TextWrapping="Wrap" AcceptsReturn="True" MaxHeight="128" VerticalScrollBarVisibility="Auto"
+                                             VerticalContentAlignment="Top" Margin="0,14,0,0"
+                                             KeyDown="ConsoleInput_KeyDown" TextChanged="ConsoleInput_TextChanged"
+                                             SelectionChanged="ConsoleInput_SelectionChanged"
+                                             GotKeyboardFocus="ConsoleInput_GotKeyboardFocus" LostKeyboardFocus="ConsoleInput_LostKeyboardFocus"/>
+                                    <TextBlock x:Name="ConsolePlaceholder" Text=" " Foreground="#00FF33"
+                                               Opacity="0.55" FontFamily="{StaticResource ConsoleFont}" FontSize="32"
+                                               IsHitTestVisible="False" VerticalAlignment="Top" Margin="0,14,0,0"/>
+                                    <!-- Block caret drawn over the editor, the native thin caret is transparent -->
+                                    <Rectangle x:Name="ConsoleCaret" Width="16" Height="36" Fill="#00FF33"
+                                               HorizontalAlignment="Left" VerticalAlignment="Top"
+                                               Visibility="Collapsed" IsHitTestVisible="False"/>
+                                </Grid>
+                            </Border>
+
+                            <Border x:Name="ConsoleSendButton" Grid.Column="1" Width="80" Height="80" Margin="18,0,0,0"
+                                    Background="Transparent" BorderBrush="#00FF33" BorderThickness="4" Cursor="Hand"
+                                    MouseLeftButtonDown="ConsoleSend_Click"
+                                    MouseEnter="ConsoleKey_MouseEnter" MouseLeave="ConsoleKey_MouseLeave">
+                                <TextBlock Text=">" FontFamily="{StaticResource ConsoleFont}" Foreground="#00FF33" FontSize="46"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            </Border>
+                        </Grid>
+                    </Grid>
                 </Canvas>
             </Grid>
         </Grid>
@@ -368,17 +443,6 @@
                 </Viewport2DVisual3D.Material>
             </Viewport2DVisual3D>
         </Viewport3D>
-
-        <!-- Chat test panel that sends text to GeminiService and shows the model answer -->
-        <Border x:Name="ChatPanel" Background="#CC000000" VerticalAlignment="Top" HorizontalAlignment="Center" Margin="0,611,0,0" Padding="15" CornerRadius="10" Panel.ZIndex="999">
-            <StackPanel Orientation="Vertical" Width="400">
-                <TextBlock x:Name="AiReplyText" Text="Ассистент спит..." Foreground="LightGreen" TextWrapping="Wrap" Margin="0,0,0,10" FontSize="14" FontWeight="Bold"/>
-                <StackPanel Orientation="Horizontal">
-                    <TextBox x:Name="UserInputBox" Width="300" Height="60" Padding="5" Background="#333" Foreground="White" BorderThickness="1" BorderBrush="#555" TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" Text="Скажи что-нибудь саркастичное про мою архитектуру кода!"/>
-                    <Button Content="SEND" Width="80" Height="60" Margin="10,0,0,0" Background="#444" Foreground="White" BorderThickness="0" Click="TestAiButton_Click"/>
-                </StackPanel>
-            </StackPanel>
-        </Border>
 
         <!-- Engineering menu: sliders and preset lists bound to MainWindow properties -->
         <Border x:Name="SettingsMenu" Visibility="Collapsed" Background="#EE111111" Width="360" HorizontalAlignment="Left" Padding="10" BorderBrush="Red" BorderThickness="0,0,2,0">

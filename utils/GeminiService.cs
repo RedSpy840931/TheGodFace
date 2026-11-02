@@ -67,6 +67,9 @@ namespace TheGodFace.Utils
         // Models tried in order, the next one takes over when the previous one is unavailable.
         private readonly string[] _flashLiteCascade = new[] { "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" };
 
+        // Model that answered last, tried first so an unavailable model costs no extra round trip.
+        private string? _lastWorkingModel;
+
         // Builds the prompt from the current pose and sends the user text through the cascade.
         public async Task<FaceStateResponse> SendMessageAsync(
             string userMessage,
@@ -115,14 +118,25 @@ namespace TheGodFace.Utils
         // Tries every model of the cascade in order and reports the model that finally answered.
         private async Task<(string raw, string model)> ExecuteCascadeAsync(string[] models, string prompt, string message, Action<string>? onModelSwitched = null)
         {
+            // The last working model goes first, the rest keep their cascade order behind it.
+            string[] ordered = _lastWorkingModel != null && models.Contains(_lastWorkingModel)
+                ? new[] { _lastWorkingModel }.Concat(models.Where(m => m != _lastWorkingModel)).ToArray()
+                : models;
+
             Exception? lastEx = null;
-            for (int i = 0; i < models.Length; i++)
+            for (int i = 0; i < ordered.Length; i++)
             {
-                try { return (await _client.GenerateContentAsync(models[i], prompt, message), models[i]); }
+                try
+                {
+                    string raw = await _client.GenerateContentAsync(ordered[i], prompt, message);
+                    // Remember the answer, so the next request skips models that just failed.
+                    _lastWorkingModel = ordered[i];
+                    return (raw, ordered[i]);
+                }
                 catch (Exception ex)
                 {
                     lastEx = ex;
-                    if (i < models.Length - 1) onModelSwitched?.Invoke(models[i + 1]);
+                    if (i < ordered.Length - 1) onModelSwitched?.Invoke(ordered[i + 1]);
                 }
             }
             throw lastEx ?? new Exception("Все модели в каскаде недоступны.");

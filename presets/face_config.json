@@ -18,7 +18,7 @@
   "HasSweatDrop": false,
   "Mouths": [
     {
-      "Name": "Small U smirk",
+      "Name": "Small U smirk (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_1.png",
       "OffsetX": -41.200000000000045,
       "OffsetY": 83.99999999999989,
@@ -29,7 +29,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Pleh",
+      "Name": "Tongue out smile (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_smile_silly_tongue_out.png",
       "OffsetX": -62.799999999999955,
       "OffsetY": 152.79999999999995,
@@ -40,7 +40,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Cringe",
+      "Name": "Cringe (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_cringed.png",
       "OffsetX": -54,
       "OffsetY": 144.79999999999995,
@@ -51,7 +51,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Pog",
+      "Name": "Pog (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_pog.png",
       "OffsetX": -50.80000000000018,
       "OffsetY": 128.80000000000018,
@@ -62,7 +62,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Scolding 1",
+      "Name": "Scolding 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_condemning.png",
       "OffsetX": 161.20000000000016,
       "OffsetY": 144.0000000000001,
@@ -73,7 +73,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Scolding 2",
+      "Name": "Scolding 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_agressive_yell.png",
       "OffsetX": 175.60000000000002,
       "OffsetY": 162.4000000000001,
@@ -84,7 +84,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small talk 1 ",
+      "Name": "Small talk 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk_2.png",
       "OffsetX": -38.80000000000007,
       "OffsetY": 140.80000000000007,
@@ -95,7 +95,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small talk 2",
+      "Name": "Small talk 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk.png",
       "OffsetX": -33.20000000000016,
       "OffsetY": 175.20000000000005,
@@ -106,7 +106,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Very wide smile",
+      "Name": "Very wide smile (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_wide.png",
       "OffsetX": -61.200000000000045,
       "OffsetY": 90.40000000000009,
@@ -117,7 +117,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Wide Smile",
+      "Name": "Wide Smile (Closed mouth) ",
       "FilePath": "assets\\mouth\\mouth_closed_smile.png",
       "OffsetX": -63.60000000000002,
       "OffsetY": 123.20000000000005,
@@ -128,7 +128,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Smug talk",
+      "Name": "Smug talk (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_smug.png",
       "OffsetX": 6,
       "OffsetY": 161.60000000000002,
@@ -139,7 +139,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Smug talk 2",
+      "Name": "Smug talk wide (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile.png",
       "OffsetX": -39.599999999999795,
       "OffsetY": 174.39999999999986,
@@ -150,13 +150,13 @@
       "IsExpanded": false
     },
     {
-      "Name": "Wide open smile",
+      "Name": "Happy (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_symmetric_wide.png",
-      "OffsetX": -30.800000000000182,
-      "OffsetY": 217.60000000000002,
-      "Scale": 7.250187265917607,
-      "Rotation": 0,
-      "FlipX": false,
+      "OffsetX": -92.4000000000002,
+      "OffsetY": 215.19999999999993,
+      "Scale": 4.538576779026221,
+      "Rotation": 4.314606741573071,
+      "FlipX": true,
       "IsVisible": false,
       "IsExpanded": false
     },
@@ -172,7 +172,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small frown",
+      "Name": "Small frown (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_1.png",
       "OffsetX": -52.40000000000009,
       "OffsetY": 194.39999999999986,
@@ -183,7 +183,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Medium frown",
+      "Name": "Medium frown (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_2.png",
       "OffsetX": -46,
       "OffsetY": 195.20000000000016,
@@ -194,7 +194,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small closed neutral",
+      "Name": "Small neutral (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_3.png",
       "OffsetX": -57.999999999999886,
       "OffsetY": 190.39999999999998,
@@ -205,7 +205,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small talk blurt",
+      "Name": "Small talk blurt (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk_3.png",
       "OffsetX": 122.80000000000007,
       "OffsetY": 162.39999999999986,
@@ -216,7 +216,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small talk happy 1",
+      "Name": "Small talk happy 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile.png",
       "OffsetX": -47.60000000000002,
       "OffsetY": 145.60000000000014,
@@ -227,7 +227,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Small talk happy 2",
+      "Name": "Small talk happy 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_symmetric_wide.png",
       "OffsetX": -48.39999999999998,
       "OffsetY": 197.60000000000002,
@@ -238,7 +238,7 @@
       "IsExpanded": false
     },
     {
-      "Name": "Cute closed UwU",
+      "Name": "Cute UwU (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_smile.png",
       "OffsetX": -55.60000000000002,
       "OffsetY": 150.4000000000002,
