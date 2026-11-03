@@ -17,6 +17,10 @@ namespace TheGodFace.Models
         private string _filePath = "";
         public string FilePath { get => _filePath; set { _filePath = value; OnPropertyChanged(nameof(FilePath)); OnPropertyChanged(nameof(FullPath)); } }
 
+        // Sound played once when this mouth becomes active, empty means the generic expression cue.
+        private string _soundPath = "";
+        public string SoundPath { get => _soundPath; set { _soundPath = value ?? ""; OnPropertyChanged(nameof(SoundPath)); } }
+
         // Absolute image path resolved from FilePath for the WPF image binding.
         [JsonIgnore]
         public string FullPath => PathHelper.GetFullPath(FilePath);
@@ -58,6 +62,10 @@ namespace TheGodFace.Models
 
         private string _filePath = "assets\\decals\\brow.png";
         public string FilePath { get => _filePath; set { _filePath = value; OnPropertyChanged(nameof(FilePath)); OnPropertyChanged(nameof(FullPath)); } }
+
+        // Sound played once when this eyebrow set becomes active, empty keeps the generic cue.
+        private string _soundPath = "";
+        public string SoundPath { get => _soundPath; set { _soundPath = value ?? ""; OnPropertyChanged(nameof(SoundPath)); } }
 
         [JsonIgnore]
         public string FullPath => PathHelper.GetFullPath(FilePath);
@@ -125,6 +133,10 @@ namespace TheGodFace.Models
 
         private string _filePath = "assets\\decals\\cheek.png";
         public string FilePath { get => _filePath; set { _filePath = value; OnPropertyChanged(nameof(FilePath)); OnPropertyChanged(nameof(FullPath)); } }
+
+        // Sound played once when this cheek set becomes active, empty keeps the generic cue.
+        private string _soundPath = "";
+        public string SoundPath { get => _soundPath; set { _soundPath = value ?? ""; OnPropertyChanged(nameof(SoundPath)); } }
 
         [JsonIgnore]
         public string FullPath => PathHelper.GetFullPath(FilePath);

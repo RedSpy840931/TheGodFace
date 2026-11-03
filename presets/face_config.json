@@ -20,6 +20,7 @@
     {
       "Name": "Small U smirk (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_1.png",
+      "SoundPath": "",
       "OffsetX": -41.200000000000045,
       "OffsetY": 83.99999999999989,
       "Scale": 2.377528089887641,
@@ -31,6 +32,7 @@
     {
       "Name": "Tongue out smile (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_smile_silly_tongue_out.png",
+      "SoundPath": "",
       "OffsetX": -62.799999999999955,
       "OffsetY": 152.79999999999995,
       "Scale": 7.424719101123594,
@@ -42,6 +44,7 @@
     {
       "Name": "Cringe (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_cringed.png",
+      "SoundPath": "",
       "OffsetX": -54,
       "OffsetY": 144.79999999999995,
       "Scale": 7.124344569288389,
@@ -53,6 +56,7 @@
     {
       "Name": "Pog (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_pog.png",
+      "SoundPath": "",
       "OffsetX": -50.80000000000018,
       "OffsetY": 128.80000000000018,
       "Scale": 4.18951310861423,
@@ -64,6 +68,7 @@
     {
       "Name": "Scolding 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_condemning.png",
+      "SoundPath": "",
       "OffsetX": 161.20000000000016,
       "OffsetY": 144.0000000000001,
       "Scale": 4.691385767790263,
@@ -75,6 +80,7 @@
     {
       "Name": "Scolding 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_agressive_yell.png",
+      "SoundPath": "",
       "OffsetX": 175.60000000000002,
       "OffsetY": 162.4000000000001,
       "Scale": 4.104119850187266,
@@ -86,6 +92,7 @@
     {
       "Name": "Small talk 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk_2.png",
+      "SoundPath": "",
       "OffsetX": -38.80000000000007,
       "OffsetY": 140.80000000000007,
       "Scale": 3.0554307116104873,
@@ -97,6 +104,7 @@
     {
       "Name": "Small talk 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk.png",
+      "SoundPath": "",
       "OffsetX": -33.20000000000016,
       "OffsetY": 175.20000000000005,
       "Scale": 2.384269662921348,
@@ -108,6 +116,7 @@
     {
       "Name": "Very wide smile (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_wide.png",
+      "SoundPath": "",
       "OffsetX": -61.200000000000045,
       "OffsetY": 90.40000000000009,
       "Scale": 8.67640449438202,
@@ -119,6 +128,7 @@
     {
       "Name": "Wide Smile (Closed mouth) ",
       "FilePath": "assets\\mouth\\mouth_closed_smile.png",
+      "SoundPath": "",
       "OffsetX": -63.60000000000002,
       "OffsetY": 123.20000000000005,
       "Scale": 10.186516853932583,
@@ -130,6 +140,7 @@
     {
       "Name": "Smug talk (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_smug.png",
+      "SoundPath": "",
       "OffsetX": 6,
       "OffsetY": 161.60000000000002,
       "Scale": 4.146067415730338,
@@ -141,6 +152,7 @@
     {
       "Name": "Smug talk wide (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile.png",
+      "SoundPath": "",
       "OffsetX": -39.599999999999795,
       "OffsetY": 174.39999999999986,
       "Scale": 5.474906367041199,
@@ -152,17 +164,19 @@
     {
       "Name": "Happy (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_symmetric_wide.png",
-      "OffsetX": -92.4000000000002,
-      "OffsetY": 215.19999999999993,
-      "Scale": 4.538576779026221,
-      "Rotation": 4.314606741573071,
+      "SoundPath": "assets\\sounds\\blush.mp3",
+      "OffsetX": -61.20000000000027,
+      "OffsetY": 207.19999999999993,
+      "Scale": 2.8958801498127396,
+      "Rotation": 0,
       "FlipX": true,
       "IsVisible": false,
       "IsExpanded": false
     },
     {
-      "Name": "Small displeased",
+      "Name": "Small displeased (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk_3.png",
+      "SoundPath": "",
       "OffsetX": 25.199999999999932,
       "OffsetY": 178.4000000000001,
       "Scale": 3.9363295880149813,
@@ -174,6 +188,7 @@
     {
       "Name": "Small frown (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_1.png",
+      "SoundPath": "",
       "OffsetX": -52.40000000000009,
       "OffsetY": 194.39999999999986,
       "Scale": 3.4329588014981276,
@@ -185,6 +200,7 @@
     {
       "Name": "Medium frown (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_2.png",
+      "SoundPath": "",
       "OffsetX": -46,
       "OffsetY": 195.20000000000016,
       "Scale": 9.798501872659177,
@@ -196,6 +212,7 @@
     {
       "Name": "Small neutral (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_arch_3.png",
+      "SoundPath": "",
       "OffsetX": -57.999999999999886,
       "OffsetY": 190.39999999999998,
       "Scale": 4.223220973782773,
@@ -207,6 +224,7 @@
     {
       "Name": "Small talk blurt (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_talk_3.png",
+      "SoundPath": "",
       "OffsetX": 122.80000000000007,
       "OffsetY": 162.39999999999986,
       "Scale": 3.5737827715355794,
@@ -218,6 +236,7 @@
     {
       "Name": "Small talk happy 1 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile.png",
+      "SoundPath": "",
       "OffsetX": -47.60000000000002,
       "OffsetY": 145.60000000000014,
       "Scale": 2.216479400749063,
@@ -229,6 +248,7 @@
     {
       "Name": "Small talk happy 2 (Open mouth)",
       "FilePath": "assets\\mouth\\mouth_open_smile_symmetric_wide.png",
+      "SoundPath": "",
       "OffsetX": -48.39999999999998,
       "OffsetY": 197.60000000000002,
       "Scale": 3.2651685393258427,
@@ -240,6 +260,7 @@
     {
       "Name": "Cute UwU (Closed mouth)",
       "FilePath": "assets\\mouth\\mouth_closed_smile.png",
+      "SoundPath": "",
       "OffsetX": -55.60000000000002,
       "OffsetY": 150.4000000000002,
       "Scale": 4.271910112359551,
@@ -253,6 +274,7 @@
     {
       "Name": "Neutral (None)",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 1.7560975609756089,
       "RightRotation": 0,
@@ -268,6 +290,7 @@
     {
       "Name": "Furious",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\error.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": 26.29268292682925,
       "RightRotation": -25.536585365853654,
@@ -281,8 +304,9 @@
       "IsExpanded": false
     },
     {
-      "Name": "Asymmetric Doubt",
+      "Name": "Doubtful eyebrow raise",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 0.9024390243902285,
       "RightRotation": -5,
@@ -298,6 +322,7 @@
     {
       "Name": "Half lidded side eye left",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 0.4146341463414658,
       "RightRotation": 0,
@@ -313,6 +338,7 @@
     {
       "Name": "Half lidded side eye right",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": -4.440892098500626E-16,
       "RightRotation": 0,
@@ -328,6 +354,7 @@
     {
       "Name": "Half lidded",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 0,
       "RightRotation": 0,
@@ -343,6 +370,7 @@
     {
       "Name": "Unsure",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\blush.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": 2.926829268292683,
       "RightRotation": -5.682926829268251,
@@ -358,6 +386,7 @@
     {
       "Name": "Concerned",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\glitch.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": 0,
       "RightRotation": 0,
@@ -373,6 +402,7 @@
     {
       "Name": "Scared",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\glitch.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": -2.9268292682926833,
       "RightRotation": 3.512195121951227,
@@ -388,6 +418,7 @@
     {
       "Name": "Remorseful",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\blush.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": -6.439024390243878,
       "RightRotation": 4.682926829268297,
@@ -403,6 +434,7 @@
     {
       "Name": "Angry",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\error.mp3",
       "Scale": 0.8825468164794008,
       "LeftRotation": 14.634146341463405,
       "RightRotation": -16.390243902439,
@@ -418,6 +450,7 @@
     {
       "Name": "Confused",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": -0.5853658536585431,
       "RightRotation": -0.5853658536585427,
@@ -428,11 +461,12 @@
       "RenderLeft": true,
       "RenderRight": true,
       "IsVisible": false,
-      "IsExpanded": false
+      "IsExpanded": true
     },
     {
       "Name": "Devious side eye right",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 26.999999999999993,
       "RightRotation": -29.268292682926834,
@@ -448,6 +482,7 @@
     {
       "Name": "Devious side eye left",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 29.268292682926823,
       "RightRotation": -27.51219512195122,
@@ -463,6 +498,7 @@
     {
       "Name": "Grand Evil",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "",
       "Scale": 0.8825468164794008,
       "LeftRotation": 17.878048780487823,
       "RightRotation": -18.146341463414675,
@@ -478,11 +514,12 @@
     {
       "Name": "Shock / Surprise",
       "FilePath": "assets\\decals\\brow.png",
+      "SoundPath": "assets\\sounds\\glitch.mp3",
       "Scale": 0.8825468164794008,
-      "LeftRotation": -9.04878048780488,
-      "RightRotation": 15.975609756097565,
-      "LeftOffset": 263.39024390243907,
-      "RightOffset": 255.63414634146343,
+      "LeftRotation": -2.07317073170733,
+      "RightRotation": 0.024390243902511544,
+      "LeftOffset": 218.51219512195132,
+      "RightOffset": 220.48780487804868,
       "FlipLeftX": false,
       "FlipRightX": true,
       "RenderLeft": true,
@@ -495,6 +532,7 @@
     {
       "Name": "Cheeks \u002B Blush",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "assets\\sounds\\blush.mp3",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,
@@ -511,6 +549,7 @@
     {
       "Name": "Only Blush",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "assets\\sounds\\blush.mp3",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,
@@ -527,6 +566,7 @@
     {
       "Name": "Only Cheeks",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,
@@ -543,6 +583,7 @@
     {
       "Name": "Neutral (None)",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,
@@ -559,6 +600,7 @@
     {
       "Name": "Only Right Cheek",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,
@@ -575,6 +617,7 @@
     {
       "Name": "Only Left Cheek",
       "FilePath": "assets\\decals\\cheek.png",
+      "SoundPath": "",
       "Scale": 0.7650936329588012,
       "MaskWidth": 197.8314606741573,
       "MaskHeight": 69.26033707865169,

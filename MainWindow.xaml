@@ -300,8 +300,9 @@
                                     Background="Transparent" BorderBrush="#00FF33" BorderThickness="4" Cursor="Hand"
                                     MouseLeftButtonDown="ConsoleCloseButton_MouseDown"
                                     MouseEnter="ConsoleKey_MouseEnter" MouseLeave="ConsoleKey_MouseLeave">
-                                <TextBlock Text="⨉" Foreground="#00FF33" FontSize="46"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text="❌" Foreground="#00FF33" FontSize="40"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           Margin="0,-4,0,0"/>
                             </Border>
                         </Grid>
 
@@ -334,7 +335,7 @@
                                                Opacity="0.55" FontFamily="{StaticResource ConsoleFont}" FontSize="32"
                                                IsHitTestVisible="False" VerticalAlignment="Top" Margin="0,14,0,0"/>
                                     <!-- Block caret drawn over the editor, the native thin caret is transparent -->
-                                    <Rectangle x:Name="ConsoleCaret" Width="16" Height="36" Fill="#00FF33"
+                                    <Rectangle x:Name="ConsoleCaret" Width="26" Height="36" Fill="#00FF33"
                                                HorizontalAlignment="Left" VerticalAlignment="Top"
                                                Visibility="Collapsed" IsHitTestVisible="False"/>
                                 </Grid>
@@ -344,8 +345,9 @@
                                     Background="Transparent" BorderBrush="#00FF33" BorderThickness="4" Cursor="Hand"
                                     MouseLeftButtonDown="ConsoleSend_Click"
                                     MouseEnter="ConsoleKey_MouseEnter" MouseLeave="ConsoleKey_MouseLeave">
-                                <TextBlock Text=">" FontFamily="{StaticResource ConsoleFont}" Foreground="#00FF33" FontSize="46"
-                                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                <TextBlock Text=">" Foreground="#00FF33" FontSize="80"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           Margin="0,-20,0,0"/>
                             </Border>
                         </Grid>
                     </Grid>
@@ -537,6 +539,17 @@
                                                 </Expander.Header>
                                                 <StackPanel Margin="5,10,5,10">
 
+                                                    <!-- Sound of this preset, played once when the preset becomes active. -->
+                                                    <Grid Margin="0,0,0,10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Grid.Column="0" Content="🔊 ЗВУК ЭМОЦИИ" Click="EyebrowSound_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5"/>
+                                                        <Button Grid.Column="1" Content="✖" Click="EyebrowSoundClear_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5,0" Margin="4,0,0,0"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding SoundPath}" FontSize="9" Foreground="#AAA" Margin="0,-6,0,10" TextWrapping="Wrap"/>
+
                                                     <Grid>
                                                         <Grid.ColumnDefinitions>
                                                             <ColumnDefinition Width="*"/>
@@ -607,6 +620,17 @@
                                                 </Expander.Header>
                                                 <StackPanel Margin="5,10,5,10">
 
+                                                    <!-- Sound of this preset, played once when the preset becomes active. -->
+                                                    <Grid Margin="0,0,0,10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Grid.Column="0" Content="🔊 ЗВУК ЭМОЦИИ" Click="CheekSound_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5"/>
+                                                        <Button Grid.Column="1" Content="✖" Click="CheekSoundClear_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5,0" Margin="4,0,0,0"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding SoundPath}" FontSize="9" Foreground="#AAA" Margin="0,-6,0,10" TextWrapping="Wrap"/>
+
                                                     <CheckBox Content="С румянцем (Blush)" IsChecked="{Binding HasBlush}" Foreground="LightPink" FontWeight="Bold" Margin="0,0,0,15"/>
 
                                                     <Grid>
@@ -672,6 +696,17 @@
                                                 <StackPanel Margin="5,10,5,10">
                                                     <Button Content="📁 ВЫБРАТЬ ФАЙЛ" Click="MouthFile_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5"/>
                                                     <TextBlock Text="{Binding FilePath}" FontSize="9" Foreground="#AAA" Margin="0,2,0,10" TextWrapping="Wrap"/>
+
+                                                    <!-- Sound of this preset, played once when the preset becomes active. -->
+                                                    <Grid Margin="0,0,0,10">
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="*"/>
+                                                            <ColumnDefinition Width="Auto"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <Button Grid.Column="0" Content="🔊 ЗВУК ЭМОЦИИ" Click="MouthSound_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5"/>
+                                                        <Button Grid.Column="1" Content="✖" Click="MouthSoundClear_Click" Background="#555" Foreground="White" BorderThickness="0" Padding="5,0" Margin="4,0,0,0"/>
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding SoundPath}" FontSize="9" Foreground="#AAA" Margin="0,-6,0,10" TextWrapping="Wrap"/>
 
                                                     <TextBlock Text="Масштаб" FontSize="11" Foreground="#CCC"/>
                                                     <Slider Minimum="1.0" Maximum="15.0" Value="{Binding Scale}" Margin="0,0,0,10"/>

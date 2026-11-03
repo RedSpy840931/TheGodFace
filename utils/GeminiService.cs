@@ -1,4 +1,4 @@
-// Version: 16 (Gemma stage removed: single Flash Lite cascade)
+// Version: 17 (direct routing to the active model, cascade removed)
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,7 +25,7 @@ namespace TheGodFace.Utils
     {
         // Chat line shown to the user, with a default for empty answers.
         public string reply_text { get; set; } = "Упс, я потеряла дар речи.";
-        // Model that produced the answer, filled in by GeminiService after the cascade returns.
+        // Model that produced the answer, filled in by GeminiService after the request returns.
         public string? UsedModel { get; set; }
         public List<FaceFrame> sequence { get; set; } = new List<FaceFrame>();
 
@@ -39,11 +39,27 @@ namespace TheGodFace.Utils
         public string gaze => sequence.LastOrDefault()?.gaze ?? "free";
     }
 
-    // Sends chat text through the Flash Lite cascade and turns raw model text into a FaceStateResponse.
+    // Sends chat text straight to the currently available model and parses the answer.
     public class GeminiService
     {
+        // Models in preference order, the monitor reports which one can take a request right now.
+        private readonly string[] _priorityModels = new[] { "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" };
+
         // Shared HTTP client for every model call, created once with the key resolved at startup.
-        private readonly GoogleApiClient _client = new GoogleApiClient(LoadApiKey());
+        private readonly GoogleApiClient _client;
+
+        // Background zero-token probe that keeps a status per model for the routing decision.
+        private readonly ModelAvailabilityMonitor _monitor;
+
+        // Resolves the key once and wires the client to the availability monitor.
+        public GeminiService()
+        {
+            _client = new GoogleApiClient(LoadApiKey());
+            _monitor = new ModelAvailabilityMonitor(_client, _priorityModels);
+        }
+
+        // Availability state, the window reads it to wake the face up after the splash.
+        public ModelAvailabilityMonitor Monitor => _monitor;
 
         // Reads the key from ICON_API_KEY or api_key.txt and returns empty when neither exists.
         private static string LoadApiKey()
@@ -64,13 +80,14 @@ namespace TheGodFace.Utils
 
             return string.Empty;
         }
-        // Models tried in order, the next one takes over when the previous one is unavailable.
-        private readonly string[] _flashLiteCascade = new[] { "gemini-3.5-flash-lite", "gemini-3.1-flash-lite" };
 
-        // Model that answered last, tried first so an unavailable model costs no extra round trip.
-        private string? _lastWorkingModel;
+        // Starts the background health checks, safe to call more than once.
+        public void StartMonitoring() => _monitor.Start();
 
-        // Builds the prompt from the current pose and sends the user text through the cascade.
+        // Stops the health checks, called when the window closes.
+        public void StopMonitoring() => _monitor.Stop();
+
+        // Builds the prompt from the current pose and sends it to the active model in one request.
         public async Task<FaceStateResponse> SendMessageAsync(
             string userMessage,
             IEnumerable<string> availableMouths,
@@ -79,22 +96,16 @@ namespace TheGodFace.Utils
             string currentMouth,
             string currentBrow,
             string currentCheek,
-            int currentStress,
-            Action<FaceStateResponse>? onIntermediateResponse = null)
+            int currentStress)
         {
             try
             {
                 // Prompt template filled with the current presets so the model picks names that exist.
                 string prompt = Ic0nPromptBuilder.BuildFlashLitePrompt(availableMouths, availableBrows, availableCheeks, currentMouth, currentBrow, currentCheek, currentStress);
-                var (raw, model) = await ExecuteCascadeAsync(_flashLiteCascade, prompt, userMessage, fallbackModel =>
-                {
-                    // Interim pose shown while the next model of the cascade is being called.
-                    onIntermediateResponse?.Invoke(new FaceStateResponse
-                    {
-                        reply_text = $"Переключаюсь на резерв {fallbackModel}...",
-                        sequence = new List<FaceFrame> { new FaceFrame { target_mouth = "Small displeased", target_eyebrow = "Asymmetric Doubt", stress_level = 2, gaze = "straight" } }
-                    });
-                });
+
+                // The monitor already knows which model is free, so no sequential cascade is needed.
+                string model = _monitor.GetActiveModel();
+                string raw = await _client.GenerateContentAsync(model, prompt, userMessage);
 
                 var response = FaceResponseParser.Parse(raw);
                 response.UsedModel = model;
@@ -113,33 +124,6 @@ namespace TheGodFace.Utils
                     }
                 };
             }
-        }
-
-        // Tries every model of the cascade in order and reports the model that finally answered.
-        private async Task<(string raw, string model)> ExecuteCascadeAsync(string[] models, string prompt, string message, Action<string>? onModelSwitched = null)
-        {
-            // The last working model goes first, the rest keep their cascade order behind it.
-            string[] ordered = _lastWorkingModel != null && models.Contains(_lastWorkingModel)
-                ? new[] { _lastWorkingModel }.Concat(models.Where(m => m != _lastWorkingModel)).ToArray()
-                : models;
-
-            Exception? lastEx = null;
-            for (int i = 0; i < ordered.Length; i++)
-            {
-                try
-                {
-                    string raw = await _client.GenerateContentAsync(ordered[i], prompt, message);
-                    // Remember the answer, so the next request skips models that just failed.
-                    _lastWorkingModel = ordered[i];
-                    return (raw, ordered[i]);
-                }
-                catch (Exception ex)
-                {
-                    lastEx = ex;
-                    if (i < ordered.Length - 1) onModelSwitched?.Invoke(ordered[i + 1]);
-                }
-            }
-            throw lastEx ?? new Exception("Все модели в каскаде недоступны.");
         }
     }
 }

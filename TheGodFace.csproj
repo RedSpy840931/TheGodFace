@@ -28,6 +28,8 @@
     <Resource Include="assets\**\*.png" />
     <!-- Console typography travels with the assembly, the LCD font is resolved by pack URI. -->
     <Resource Include="assets\fonts\*.ttf" />
+    <!-- Interface cues travel with the assembly as well, so a single exe keeps its sounds. -->
+    <EmbeddedResource Include="assets\sounds\*.mp3" />
     <!-- Default pose and prompt templates are embedded as the fallback when presets is missing on disk. -->
     <EmbeddedResource Include="presets\face_config.json" />
     <EmbeddedResource Include="presets\prompts\*.txt" />

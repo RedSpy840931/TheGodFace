@@ -46,6 +46,12 @@ namespace TheGodFace
         // Independent from InitializerAnimator.CollapseMs, which only squashes the splash GIF.
         private const int FaceRevealMs = 150;
 
+        // Pupil delta below this value counts as a standstill, the upper value as a real movement.
+        private const double PupilRestThreshold = 0.05;
+        private const double PupilMoveThreshold = 1.0;
+        // Shortest gap between two eye-move cues, so a wobble cannot retrigger the sound.
+        private static readonly TimeSpan EyeMoveSoundCooldown = TimeSpan.FromMilliseconds(400);
+
         private const double MaxTrackingOffsetRatio = 0.45;
         private const double TrackingSmoothness = 0.15;
         private const double DefaultFactor = 1.0;
@@ -131,6 +137,18 @@ namespace TheGodFace
         // True while the block caret blink animation is running.
         private bool _caretBlinking = false;
 
+        // Plays the embedded interface cues: splash, blink, eye move and expression change.
+        private readonly SfxPlayer _sfx = new SfxPlayer();
+        // Pupil offset of the previous frame, used to detect the start of an eye movement.
+        private double _prevPupilX = 0;
+        private double _prevPupilY = 0;
+        // True while the pupils stand still, so a new movement can trigger the cue once.
+        private bool _pupilsAtRest = true;
+        // Blocks a second eye-move cue while the first one is still fresh.
+        private DateTime _lastEyeMoveSound = DateTime.MinValue;
+        // Set while ApplyFaceFrame changes the presets, so the cue plays once from that method.
+        private bool _suppressExpressionSound = false;
+
         // Splash animator that plays the initialization GIF on FaceCanvas.
         private InitializerAnimator? _initAnimator;
         // Y scale of the face reveal, created here because XAML gives no fields for named Freezables.
@@ -138,6 +156,9 @@ namespace TheGodFace
         // Y shift that keeps the reveal axis fixed while _faceRevealScale changes.
         private readonly TranslateTransform _faceRevealShift = new(0.0, 0.0);
         private bool _isSplashActive = false;
+        // Starts true, so the pupils never track the cursor during the splash, and stays set until
+        // the monitor finds a usable model; the face is still the whole time.
+        private bool _isZonedOut = true;
         private int _leftClickCount = 0;
         private DateTime _lastClickTime = DateTime.MinValue;
         private double _leftTrackingX = 0;
@@ -292,6 +313,8 @@ namespace TheGodFace
                 Centered = WindowState == WindowState.Maximized
             };
             _initAnimator.Start();
+            // The startup cue runs together with the splash animation.
+            _sfx.PlayInitialization();
 
             // Warm up Piper TTS during splash to avoid cold start
             _ = Task.Run(async () =>
@@ -328,12 +351,17 @@ namespace TheGodFace
 
             ApplyLoadedConfig(_loadedConfig);
             _geminiService ??= new GeminiService();
+            // Health probes run from here on, so the first message already knows the active model.
+            _geminiService.StartMonitoring();
             _audioSequencePlayer ??= new AudioSequencePlayer((idx, text) => SetAiReplyText(text), frame => Dispatcher.Invoke(() => ApplyFaceFrame(frame)));
             ShowFaceAndChat();
 
             // Stretch the face from the line to full height, which ends the handover.
             await RevealFaceAsync(revealCenter);
             StartBehaviors();
+
+            // The face stays dormant until the monitor confirms at least one model is usable.
+            _ = RunAwakeGateAsync();
         }
 
         private FaceConfig? _loadedConfig;
@@ -348,6 +376,8 @@ namespace TheGodFace
                 {
                     _loadedConfig = ConfigManager.Load();
                     _geminiService = new GeminiService();
+                    // Checks start during the splash, so their result is ready when the face appears.
+                    _geminiService.StartMonitoring();
                 });
 
                 Task winner = await Task.WhenAny(initTask, Task.Delay(TimeSpan.FromSeconds(10)));
@@ -467,9 +497,12 @@ namespace TheGodFace
             }
             catch { }
             _initAnimator?.Cancel();
+            _geminiService?.StopMonitoring();
             _appLifetimeCts.Cancel();
             _idleCts?.Cancel();
             _sequencePlaybackCts?.Cancel();
+            // Silences any cue still running and frees its audio devices.
+            _sfx.Dispose();
         }
 
         // Sends the chat text to GeminiService and plays the returned sequence or keeps the idle gaze.
@@ -497,12 +530,7 @@ namespace TheGodFace
                 currentMouth,
                 currentBrow,
                 currentCheek,
-                currentStress,
-                onIntermediateResponse: inter => Dispatcher.Invoke(() =>
-                {
-                    _lastModelTag = !string.IsNullOrEmpty(inter.UsedModel) ? $"[{inter.UsedModel}] " : "[резерв] ";
-                    if (inter.sequence != null && inter.sequence.Count > 0) _ = PlaySequenceWithTtsAsync(inter.sequence);
-                })
+                currentStress
             );
 
             Dispatcher.Invoke(() =>
@@ -854,6 +882,43 @@ namespace TheGodFace
 
         public void ApplyFaceFrame(FaceFrame frame)
         {
+            // Visible presets before the change, so a cue fires only when the expression really moves.
+            MouthPreset? prevMouth = Mouths.FirstOrDefault(m => m.IsVisible);
+            EyebrowPreset? prevBrow = Eyebrows.FirstOrDefault(b => b.IsVisible);
+            CheekPreset? prevCheek = Cheeks.FirstOrDefault(c => c.IsVisible);
+
+            // The preset radio buttons raise Checked on every visibility write below,
+            // so their own cue is muted and the single cue below covers the whole frame.
+            _suppressExpressionSound = true;
+            try
+            {
+                ApplyFaceFrameCore(frame);
+            }
+            finally
+            {
+                _suppressExpressionSound = false;
+            }
+
+            MouthPreset? newMouth = Mouths.FirstOrDefault(m => m.IsVisible);
+            EyebrowPreset? newBrow = Eyebrows.FirstOrDefault(b => b.IsVisible);
+            CheekPreset? newCheek = Cheeks.FirstOrDefault(c => c.IsVisible);
+
+            // Mouth, brows and cheeks changing in the same frame still produce one cue:
+            // each preset brings its own sound, and a shared file is played only once.
+            if (prevMouth != newMouth || prevBrow != newBrow || prevCheek != newCheek)
+            {
+                bool playedPresetSound = PlayPresetSounds(
+                    prevMouth != newMouth ? newMouth?.SoundPath : null,
+                    prevBrow != newBrow ? newBrow?.SoundPath : null,
+                    prevCheek != newCheek ? newCheek?.SoundPath : null);
+                // No preset sound assigned: the generic expression cue keeps the change audible.
+                if (!playedPresetSound) _sfx.PlayExpressionChange();
+            }
+        }
+
+        // Writes one frame into the sliders, presets and gaze flags.
+        private void ApplyFaceFrameCore(FaceFrame frame)
+        {
             this.StressSlider.Value = Math.Clamp(frame.stress_level, 1, 3);
             this.HasSweatDrop = frame.sweat_drop;
             ApplySquint(frame.squint ?? "none");
@@ -922,6 +987,47 @@ namespace TheGodFace
             _ = IdleMonitorLoop(token);
         }
 
+        // Freezes the face right after the splash: frontal gaze, no blinks, no head turns.
+        private void EnterZonedOut()
+        {
+            _isZonedOut = true;
+            ApplyGaze("straight");
+            SaccadeOffset = new Point(0, 0);
+            // The cube keeps the angle restored from the previous session in both modes;
+            // auto-tracking resumes only after the wake-up call clears the flag.
+            UpdateEyeVisibility();
+        }
+
+        // Waits for the first available model, then brings the face to life after a short random pause.
+        private async Task RunAwakeGateAsync()
+        {
+            EnterZonedOut();
+            var token = _appLifetimeCts.Token;
+            try
+            {
+                // Without a service there is nothing to wait for, so the face wakes up right away.
+                if (_geminiService != null) await _geminiService.Monitor.WaitForAvailableAsync(token);
+                // Random two to four second pause, so the dormant face is visible before it moves.
+                await Task.Delay(_random.Next(2000, 4001), token);
+                await WakeUpAsync();
+            }
+            catch (TaskCanceledException) { }
+            catch (Exception ex)
+            {
+                // A failed gate must not freeze the face for the whole session.
+                System.Diagnostics.Debug.WriteLine($"wake-up gate failed: {ex.Message}");
+                await WakeUpAsync();
+            }
+        }
+
+        // Leaves the dormant state: free gaze returns, head tracking resumes and the face blinks once.
+        private async Task WakeUpAsync()
+        {
+            _isZonedOut = false;
+            ApplyGaze("free");
+            await TriggerBlinkAsync();
+        }
+
         // Blinks every four to ten seconds while the gaze stays free.
         private async Task ConstantBlinkLoop(CancellationToken token)
         {
@@ -930,7 +1036,8 @@ namespace TheGodFace
                 while (!token.IsCancellationRequested)
                 {
                     await Task.Delay(_random.Next(4000, 10001), token);
-                    if (!token.IsCancellationRequested && GazeFree) await TriggerBlinkAsync();
+                    // A dormant face holds its eyes open, blinks resume only after the wake-up.
+                    if (!token.IsCancellationRequested && GazeFree && !_isZonedOut) await TriggerBlinkAsync();
                 }
             }
             catch (TaskCanceledException) { }
@@ -944,6 +1051,8 @@ namespace TheGodFace
                 while (!token.IsCancellationRequested)
                 {
                     await Task.Delay(_random.Next(2000, 5001), token);
+                    // While zoned out the pupils stay centered, so saccades are skipped entirely.
+                    if (_isZonedOut) { SaccadeOffset = new Point(0, 0); continue; }
                     for (int i = 0; i < 3; i++)
                     {
                         if (token.IsCancellationRequested) return;
@@ -964,6 +1073,8 @@ namespace TheGodFace
                 while (!token.IsCancellationRequested)
                 {
                     await Task.Delay(1000, token);
+                    // Idle reactions (side glance, wandering stare) belong to a live face only.
+                    if (_isZonedOut) continue;
                     double idleSeconds = (DateTime.Now - _lastMouseMoveTime).TotalSeconds;
                     if (idleSeconds >= 120.0 && !_isIdleActionRunning) _ = RunWanderingTask();
                     else if (idleSeconds >= 60.0 && idleSeconds < 120.0 && !_isIdleActionRunning) _ = RunSideEyeTask();
@@ -1017,6 +1128,8 @@ namespace TheGodFace
         // Shows the blink decals for BlinkDurationMs and hides them again.
         public async Task TriggerBlinkAsync()
         {
+            // The cue belongs to the closing of the eyes, so it starts with the blink decals.
+            _sfx.PlayBlink();
             _isBlinking = true;
             UpdateEyeVisibility();
             await Task.Delay(BlinkDurationMs);
@@ -1067,7 +1180,13 @@ namespace TheGodFace
             double actualDx = mouseInGrid.X - (MainGrid.ActualWidth / HalfDivisor) + SaccadeOffset.X;
             double actualDy = mouseInGrid.Y - (MainGrid.ActualHeight / HalfDivisor + (_currentHeightOffset * _currentScale)) + SaccadeOffset.Y;
 
-            if (!GazeFree)
+            if (_isZonedOut)
+            {
+                // Dormant face: the pupils sit dead center and ignore the cursor and saccade offset.
+                actualDx = 0;
+                actualDy = 0;
+            }
+            else if (!GazeFree)
             {
                 actualDx = 0;
                 actualDy = 0;
@@ -1101,7 +1220,28 @@ namespace TheGodFace
             _leftTrackingY = averageY;
             _rightTrackingY = averageY;
 
-            if (_is3DMode && !_isSubmissiveMode)
+            // Eye-move cue: fires when the pupils start moving again after standing still,
+            // so continuous tracking and long saccades produce one sound per movement.
+            double pupilDelta = Math.Abs(_leftTrackingX - _prevPupilX) + Math.Abs(_leftTrackingY - _prevPupilY);
+            _prevPupilX = _leftTrackingX;
+            _prevPupilY = _leftTrackingY;
+            if (pupilDelta < PupilRestThreshold)
+            {
+                _pupilsAtRest = true;
+            }
+            else if (_pupilsAtRest && pupilDelta > PupilMoveThreshold)
+            {
+                _pupilsAtRest = false;
+                // The dormant face holds the pupils still, and a fresh cue waits out the cooldown.
+                if (!_isZonedOut && DateTime.UtcNow - _lastEyeMoveSound > EyeMoveSoundCooldown)
+                {
+                    _lastEyeMoveSound = DateTime.UtcNow;
+                    _sfx.PlayEyeMove();
+                }
+            }
+
+            // The dormant face does not follow the cursor, so the cube keeps its frontal angle.
+            if (_is3DMode && !_isSubmissiveMode && !_isZonedOut)
             {
                 Point rotTargetGrid;
                 try { rotTargetGrid = MainGrid.PointFromScreen(currentGlobalMousePos); }
@@ -1423,6 +1563,77 @@ namespace TheGodFace
             }
         }
 
+        // Stores the sound of a mouth preset, relative to the assets root like the image files.
+        private void MouthSound_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is MouthPreset preset)
+                preset.SoundPath = PickSoundFile(preset.SoundPath);
+        }
+
+        // Drops the mouth sound, so the preset falls back to the generic expression cue.
+        private void MouthSoundClear_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is MouthPreset preset) preset.SoundPath = "";
+        }
+
+        // Stores the sound of an eyebrow preset, relative to the assets root like the image files.
+        private void EyebrowSound_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is EyebrowPreset preset)
+                preset.SoundPath = PickSoundFile(preset.SoundPath);
+        }
+
+        // Drops the eyebrow sound, so the preset falls back to the generic expression cue.
+        private void EyebrowSoundClear_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is EyebrowPreset preset) preset.SoundPath = "";
+        }
+
+        // Stores the sound of a cheek preset, relative to the assets root like the image files.
+        private void CheekSound_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is CheekPreset preset)
+                preset.SoundPath = PickSoundFile(preset.SoundPath);
+        }
+
+        // Drops the cheek sound, so the preset falls back to the generic expression cue.
+        private void CheekSoundClear_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.DataContext is CheekPreset preset) preset.SoundPath = "";
+        }
+
+        // Shared audio picker; a cancelled dialog keeps the current path.
+        private string PickSoundFile(string current)
+        {
+            var dialog = new OpenFileDialog
+            {
+                Filter = "Audio Files|*.mp3;*.wav|All Files|*.*",
+                InitialDirectory = System.IO.Path.Combine(PathHelper.BaseAssetsDir, "assets", "sounds")
+            };
+            if (dialog.ShowDialog() != true) return current;
+            return PathHelper.GetRelativePath(dialog.FileName);
+        }
+
+        // Plays the preset sound, or the generic expression cue when the preset has none.
+        private void PlaySelectionSound(string? soundPath)
+        {
+            if (!PlayPresetSounds(soundPath)) _sfx.PlayExpressionChange();
+        }
+
+        // Starts the sounds of the presets that just became active, each file at most once per change.
+        private bool PlayPresetSounds(params string?[] soundPaths)
+        {
+            var played = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string? path in soundPaths)
+            {
+                if (string.IsNullOrWhiteSpace(path)) continue;
+                // Two presets sharing one file must not stack, so the second copy is dropped here.
+                if (!played.Add(path!)) continue;
+                _sfx.PlayPresetSound(path!);
+            }
+            return played.Count > 0;
+        }
+
         private void DeleteMouth_Click(object sender, RoutedEventArgs e) { if (sender is Button btn && btn.DataContext is MouthPreset preset) Mouths.Remove(preset); }
 
         private void MouthName_MouseDown(object sender, MouseButtonEventArgs e)
@@ -1446,7 +1657,12 @@ namespace TheGodFace
         private void MouthVisibility_Checked(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is MouthPreset sel)
+            {
                 foreach (var m in Mouths) if (m != sel) m.IsVisible = false;
+
+                // A radio click in the editor is a face change too, ApplyFaceFrame mutes this during its own writes.
+                if (!_suppressExpressionSound && !_isSplashActive) PlaySelectionSound(sel.SoundPath);
+            }
         }
 
         private void MouthExpander_Expanded(object sender, RoutedEventArgs e)
@@ -1520,7 +1736,12 @@ namespace TheGodFace
         private void EyebrowVisibility_Checked(object sender, RoutedEventArgs e)
         {
             if (sender is FrameworkElement fe && fe.DataContext is EyebrowPreset sel)
+            {
                 foreach (var eb in Eyebrows) if (eb != sel) eb.IsVisible = false;
+
+                // Same as the mouth handler: only a real editor click reaches this line.
+                if (!_suppressExpressionSound && !_isSplashActive) PlaySelectionSound(sel.SoundPath);
+            }
         }
 
         private void EyebrowExpander_Expanded(object sender, RoutedEventArgs e)
@@ -1557,10 +1778,14 @@ namespace TheGodFace
 
         private void CheekVisibility_Checked(object sender, RoutedEventArgs e)
         {
+            // Checked also fires for binding writes, ApplyFaceFrame mutes itself with _suppressExpressionSound.
             if (sender is FrameworkElement fe && fe.DataContext is CheekPreset sel)
             {
                 foreach (var ch in Cheeks) if (ch != sel) ch.IsVisible = false;
                 UpdateEyeVisibility();
+
+                // A cheek swap from the editor counts as a face change, same rule as the other two lists.
+                if (!_suppressExpressionSound && !_isSplashActive) PlaySelectionSound(sel.SoundPath);
             }
         }
 
